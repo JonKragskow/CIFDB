@@ -1,7 +1,7 @@
 PROGRAM DBBuild
 IMPLICIT NONE
 CHARACTER(LEN=100) :: InputFile, Line, InSystematicName, Cdummy, INaChar, INbChar, INcChar, INAlphaChar, INBetaChar, INGammaChar, INVolumeChar,DatabaseFile,  InCollectionDate, InCollectionEntity,InCollectionCode !InCollectionDay, InCollectionMonth, InCollectionYear
-CHARACTER(LEN = 10) :: YoN, RYoN, TolYoN, quickflag,initialise,initialiseflag
+CHARACTER(LEN = 10) :: YoN, RYoN, TolYoN, QuickFlag,Initialise,InitialiseFlag
 CHARACTER(LEN = 100), ALLOCATABLE ::  DBCollectionCode(:), DBCollectionDate(:), DBCollectionEntity(:), DBSystematicName(:)
 CHARACTER(LEN = 1), ALLOCATABLE :: aTolFlag(:), bTolFlag(:), cTolFlag(:), AlphaTolFlag(:), BetaTolFlag(:), GammaTolFlag(:), VolTolFlag(:), TolFlagArray(:,:)
 INTEGER :: Nameflag,NDatabaseEntries, CollectionDateFlag, CollectionEntityFlag, DBE, SimilarityCount
@@ -10,27 +10,28 @@ REAL(KIND = 8), ALLOCATABLE :: DBa(:), DBb(:), DBc(:), DBAlpha(:), DBBeta(:),DBG
 
 call GET_COMMAND_ARGUMENT(1,InputFile)
 
-IF(TRIM(InputFile) == '-h' .or. TRIM(InputFile) == '') THEN
+IF(TRIM(ADJUSTL(InputFile)) == '-h' .or. TRIM(ADJUSTL(InputFile)) == '') THEN
                WRITE(6,*) 'DBBuild (NewCIFFile) (DatabaseFile) <QuickAdd (y or n)>'
                 STOP
 END IF
 
 
 call GET_COMMAND_ARGUMENT(2,DatabaseFile)
-call GET_COMMAND_ARGUMENT(3,quickflag)
+call GET_COMMAND_ARGUMENT(3,QuickFlag)
 
-IF (quickflag=='y') THEN
-    quickflag='y'
+IF (QuickFlag=='y') THEN
+    QuickFlag='y'
 ELSE
-    quickflag='n'
+    QuickFlag='n'
 END IF
 
-call GET_COMMAND_ARGUMENT(4,initialiseflag)
+!Secret flag for InitialiseDB to use to create 1st entry
+call GET_COMMAND_ARGUMENT(4,InitialiseFlag)
 
-IF (initialiseflag=='y') THEN
-    initialise='y'
+IF (InitialiseFlag=='y') THEN
+    Initialise='y'
 ELSE
-    initialise='n'
+    Initialise='n'
 END IF
 
 
@@ -135,7 +136,7 @@ IF (CollectionEntityFlag == 0) InCollectionEntity = 'UNKNOWN'
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Read in database file !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-IF (initialise=='n') THEN
+IF (Initialise=='n') THEN
     OPEN(66, FILE = DatabaseFile, STATUS = 'OLD')
     
     !Read Number of Database Entries
@@ -317,7 +318,7 @@ END IF
 IF ( quickflag /= 'y') THEN
     WRITE(6,*) 'Would you like to add this entry to the Database? (y/n)'
     READ(5,*) YoN
-    DO WHILE(YoN/='y'.AND.YoN/='n')
+    DO WHILE(YoN /= 'y' .AND. YoN /= 'n')
         WRITE(6,*)
         WRITE(6,*) 'Lets try that again Chief'
         WRITE(6,*) 'Would you like to add this entry to the Database? (y/n)'
@@ -327,7 +328,7 @@ IF ( quickflag /= 'y') THEN
         WRITE(6,*)
         WRITE(6,*) 'Are you sure you want to add this entry (y/n)'
         READ(5,*) RYoN
-        DO WHILE (RYoN/='y'.AND.RYoN/='n')
+        DO WHILE (RYoN /= 'y' .AND. RYoN /= 'n')
             WRITE(6,*)
             WRITE(6,*) 'Lets try that again Chief'
             WRITE(6,*) 'Are you sure you want this entry (y/n)'
@@ -352,7 +353,7 @@ IF (YoN == 'y' .AND. RYoN == 'y') THEN
     WRITE(66,*)
 
     !Loop over existing entries
-    IF (initialise=='n') THEN
+    IF (Initialise == 'n') THEN
         DO DBE = 1, NDatabaseEntries
             WRITE(66,'(A7, A3, A8, A3, A4, A3, A40, A3, F7.3, A3, F7.3, A3, F7.3, A3, F7.3, A3, F7.3, A3, F7.3, A3, F9.3)') ADJUSTL(TRIM(DBCollectionCode(DBE))), '   ', ADJUSTL(TRIM(DBCollectionDate(DBE))), '   ', ADJUSTL(TRIM(DBCollectionEntity(DBE))), '   ', ADJUSTL(TRIM(DBSystematicName(DBE))), '   ', DBa(DBE), '  ', DBb(DBE), '   ', DBc(DBE), '   ', DBalpha(DBE), '   ', DBbeta(DBE), '   ', DBGamma(DBE), '   ', DBVolume(DBE)
         END DO

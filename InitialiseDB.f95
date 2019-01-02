@@ -6,7 +6,7 @@ PROGRAM INITIALISEDB
 
 CALL GET_COMMAND_ARGUMENT(1,CIFListFile)
 
-IF (ciflistfile=='-h') THEN
+IF (ADJUSTL(TRIM(CifListFile))=='-h' .OR. ADJUSTL(TRIM(CifListFile))=='') THEN
     WRITE(6,*) 'InitialiseDB (CIFListFile) (NumberOfCIFs)'
     WRITE(6,*) 'CIFListFile is a file containing a list of paths of the CIFs you want to add'
     STOP

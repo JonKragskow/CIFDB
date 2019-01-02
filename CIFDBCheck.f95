@@ -10,7 +10,7 @@ REAL(KIND = 8), ALLOCATABLE :: DBa(:), DBb(:), DBc(:), DBAlpha(:), DBBeta(:),DBG
 
 call GET_COMMAND_ARGUMENT(1,DatabaseFile)
 
-IF(TRIM(DatabaseFile) == '-h' .or. TRIM(DatabaseFile) == '') THEN
+IF(TRIM(ADJUSTL(DatabaseFile)) == '-h' .or. TRIM(ADJUSTL(DatabaseFile)) == '') THEN
                WRITE(6,*) 'CIFDBCheck (DatabaseFile) (a) (b) (c) (alpha) (beta) (gamma) (volume)'
                 STOP
 END IF
