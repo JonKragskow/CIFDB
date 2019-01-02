@@ -11,7 +11,7 @@ REAL(KIND = 8), ALLOCATABLE :: DBa(:), DBb(:), DBc(:), DBAlpha(:), DBBeta(:),DBG
 call GET_COMMAND_ARGUMENT(1,InputFile)
 
 IF(TRIM(InputFile) == '-h' .or. TRIM(InputFile) == '') THEN
-               WRITE(6,*) 'DBBuild (NewCIFFile) (DatabaseFile) <quickflag (y or n)>'
+               WRITE(6,*) 'DBBuild (NewCIFFile) (DatabaseFile) <QuickAdd (y or n)>'
                 STOP
 END IF
 
@@ -58,13 +58,23 @@ OPEN(33, FILE = InputFile, STATUS = 'OLD')
                 Line = ADJUSTL(Line)
                 !Collection code
                 IF(Line(1:5) == 'data_') THEN
-                    InCollectionCode = ADJUSTL(TRIM(Line(6:12)))
+                    IF (LEN(ADJUSTL(TRIM(Line))) /= 5) THEN 
+                        InCollectionCode = ADJUSTL(TRIM(Line(6:12)))
+                    ELSE
+                        WRITE(6,*) 'No collection code found in CIF!'
+                        WRITE(6,*) 'DBBuild Aborts!'
+                        STOP
+                    END IF
                 END IF
     
                 !Systematic Name
                 IF(Line(1:25) == '_chemical_name_systematic') THEN
-                    InSystematicName = Replace_Text(ADJUSTL(TRIM(Line(26:))),"'",'')
-                    NameFlag = 1
+                    IF (LEN(ADJUSTL(TRIM(Line))) /= 25) THEN 
+                        InSystematicName = Replace_Text(ADJUSTL(TRIM(Line(26:))),"'",'')
+                        NameFlag = 1
+                    ELSE
+                        WRITE(6,*) 'Warning - No systematic name detected in CIF file'
+                    END IF
                 END IF
                 !Collection Date
                 !IF(Line(1:30) == '_manchester_internal_coll_date') THEN
@@ -381,6 +391,8 @@ END FUNCTION Replace_Text
 
 
 FUNCTION Cut_To_Char (s,cutchar)  RESULT(outs)
+    !http://fortranwiki.org/fortran/show/String_Functions
+
 
 CHARACTER(*)        :: s,cutchar
 CHARACTER(LEN(s)+100) :: outs
