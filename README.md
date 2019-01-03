@@ -1,7 +1,7 @@
 # CIFDB
-A set of programs designed to create a personal bank of CIFs for a research group.
+A set of programs designed to create a database of CIF cell parameters in the form of a human-readable text file for a research group or individual. The interface to the program is the command line (terminal or cmd).
 
-kragskow.com/cifdb
+                                                    kragskow.com/cifdb
 
 .exe files are for windows
 
