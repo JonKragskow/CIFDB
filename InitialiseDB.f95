@@ -16,22 +16,28 @@ CALL GET_COMMAND_ARGUMENT(2,NCIFChar)
 READ(NCIFChar,*) NCIFs
 ALLOCATE(CIFList(NCIFs))
 
+OPEN(66, FILE = 'CIFDATABASE.txt', STATUS = 'UNKNOWN')
+    WRITE(66,'(I0)') 0
+CLOSE(66)
+
+
+OPEN(55, FILE = 'DBERRORS.txt', STATUS = 'UNKNOWN')
+CLOSE(55)
 OPEN(33, FILE = TRIM(ADJUSTL(CIFListFile)),STATUS = 'OLD')
 
 
-DO J = 1,NCIFs
-    READ(33,*) CIFList(J) 
+    DO J = 1,NCIFs
+        READ(33,'(A)') CIFList(J) 
+            CALL SYSTEM('DBBuild '//trim(adjustl(CIFList(J)))//' CIFDATABASE.txt y y')!DOS`
+            !CALL SYSTEM('./DBBuild '//trim(adjustl(CIFList(J)))//' CIFDATABASE.txt y y')!Unix
+            !WRITE(6,*) './DBBuild '//trim(adjustl(CIFList(J)))//' CIFDATABASE.txt y y'!debug
+    END DO
 
-    IF (J==1) THEN
-        CALL SYSTEM('DBBuild '//trim(adjustl(CIFList(J)))//' CIFDATABASE.txt y y')!DOS`
-        !CALL SYSTEM('./DBBuild '//trim(adjustl(CIFList(J)))//' CIFDATABASE y y')!Unix
-        !WRITE(6,*) './DBBuild '//trim(adjustl(CIFList(J)))//' CIFDATABASE y y'!debug
-    ELSE
-        CALL SYSTEM('DBBuild '//trim(adjustl(CIFList(J)))//' CIFDATABASE.txt y n')!DOS
-        !CALL SYSTEM('./DBBuild '//trim(adjustl(CIFList(J)))//' CIFDATABASE y n')!Unix
-        !WRITE(6,*) './DBBuild '//trim(adjustl(CIFList(J)))//' CIFDATABASE y n'!debug
-    END IF
-END DO
+CLOSE(33)
+
+WRITE(6,*) '****************************************************'
+WRITE(6,*) 'Please Check DBERRORS.txt for any CIF related errors'
+WRITE(6,*) '****************************************************'
 
 
 END PROGRAM INITIALISEDB

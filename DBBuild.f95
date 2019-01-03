@@ -1,10 +1,11 @@
 PROGRAM DBBuild
 IMPLICIT NONE
 CHARACTER(LEN=100) :: InputFile, Line, InSystematicName, Cdummy, INaChar, INbChar, INcChar, INAlphaChar, INBetaChar, INGammaChar, INVolumeChar,DatabaseFile,  InCollectionDate, InCollectionEntity,InCollectionCode !InCollectionDay, InCollectionMonth, InCollectionYear
-CHARACTER(LEN = 10) :: YoN, RYoN, TolYoN, QuickFlag,Initialise,InitialiseFlag
-CHARACTER(LEN = 100), ALLOCATABLE ::  DBCollectionCode(:), DBCollectionDate(:), DBCollectionEntity(:), DBSystematicName(:)
+CHARACTER(LEN=250) :: BIGLINE
+CHARACTER(LEN = 10) :: YoN, RYoN, TolYoN, QuickFlag,InitialiseFlag,DCIFYoN
+CHARACTER(LEN = 100), ALLOCATABLE ::  DBCollectionCode(:), DBCollectionEntity(:), DBSystematicName(:), DBCollectionDate(:)
 CHARACTER(LEN = 1), ALLOCATABLE :: aTolFlag(:), bTolFlag(:), cTolFlag(:), AlphaTolFlag(:), BetaTolFlag(:), GammaTolFlag(:), VolTolFlag(:), TolFlagArray(:,:)
-INTEGER :: Nameflag,NDatabaseEntries, CollectionDateFlag, CollectionEntityFlag, DBE, SimilarityCount
+INTEGER :: Nameflag,NDatabaseEntries, CollectionDateFlag, CollectionEntityFlag, DBE, SimilarityCount,intdummy
 REAL(KIND = 8) :: INa, INb, INc, INAlpha, INBeta, INGamma, INVolume, aTol, bTol, cTol, alphaTol, betaTol, gammaTol, VolTol, DefaultTol
 REAL(KIND = 8), ALLOCATABLE :: DBa(:), DBb(:), DBc(:), DBAlpha(:), DBBeta(:),DBGamma(:), DBVolume(:)
 
@@ -29,18 +30,20 @@ END IF
 call GET_COMMAND_ARGUMENT(4,InitialiseFlag)
 
 IF (InitialiseFlag=='y') THEN
-    Initialise='y'
+    InitialiseFlag='y'
+    OPEN(55, FILE = 'DBERRORS.txt', STATUS = 'UNKNOWN',ACCESS = 'APPEND')
 ELSE
-    Initialise='n'
+    InitialiseFlag='n'
 END IF
 
 
 !!!!!!! Write some gubbins
-WRITE(6,*) '        ---------------------'
-WRITE(6,*) '            DBBuild V2.0'
-WRITE(6,*) '        By Jon G. C. Kragskow'
-WRITE(6,*) '        ---------------------'
-
+IF (InitialiseFlag /= 'y') THEN
+    WRITE(6,*) '        ---------------------'
+    WRITE(6,*) '            DBBuild V2.0'
+    WRITE(6,*) '        By Jon G. C. Kragskow'
+    WRITE(6,*) '        ---------------------'
+END IF
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Read input CIF !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -62,7 +65,7 @@ OPEN(33, FILE = InputFile, STATUS = 'OLD')
                     IF (LEN(ADJUSTL(TRIM(Line))) /= 5) THEN 
                         InCollectionCode = ADJUSTL(TRIM(Line(6:12)))
                     ELSE
-                        WRITE(6,*) 'No collection code found in CIF!'
+                        WRITE(6,*) 'No collection code found in CIF     ', InputFile
                         WRITE(6,*) 'DBBuild Aborts!'
                         STOP
                     END IF
@@ -72,21 +75,35 @@ OPEN(33, FILE = InputFile, STATUS = 'OLD')
                 IF(Line(1:25) == '_chemical_name_systematic') THEN
                     IF (LEN(ADJUSTL(TRIM(Line))) /= 25) THEN 
                         InSystematicName = Replace_Text(ADJUSTL(TRIM(Line(26:))),"'",'')
+                        InSystematicName = strcompress(InSystematicName,intdummy)
                         NameFlag = 1
                     ELSE
-                        WRITE(6,*) 'Warning - No systematic name detected in CIF file'
+                        WRITE(6,*) 'Warning - No systematic name detected in CIF     ', InputFile
+                        IF (InitialiseFlag == 'y') WRITE(55,*) 'No systematic name detected for file --  ',InputFile
                     END IF
                 END IF
                 !Collection Date
-                !IF(Line(1:30) == '_manchester_internal_coll_date') THEN
-                !    CollectionDateFlag = 1
-                !    READ(Line, *) Cdummy, InCollectionDay, InCollectionMonth, InCollectionYear
-                !    WRITE(6,*) InCollectionMonth
-                !    InCollectionDate = ADJUSTL(TRIM(InCollectionDate))//'_'//ADJUSTL(TRIM(InCollectionMonth))//'_'//ADJUSTL(TRIM(InCollectionYear))
-                !END IF
-                IF(Line(1:30) == '_manchester_internal_coll_user') THEN
-                    CollectionEntityFlag = 1
-                    READ(Line, *) Cdummy, InCollectionEntity
+                IF(Line(1:30) == '_manchester_internal_coll_date') THEN
+                    IF (LEN(ADJUSTL(TRIM(Line))) /= 30) THEN 
+                        CollectionDateFlag = 1
+                        InCollectionDate = ADJUSTL(TRIM(Line(31:)))
+                        InCollectionDate = Replace_Text(InCollectionDate,'/','_')
+                    ELSE
+                        WRITE(6,*) 'Warning - No collection date detected in CIF     ', InputFile
+                        IF (InitialiseFlag == 'y') WRITE(55,*) 'No collection date detected for file --  ',InputFile
+                    END IF
+                END IF
+
+                !InCollection Client
+                IF(Line(1:32) == '_manchester_internal_coll_client') THEN
+                    IF (LEN(ADJUSTL(TRIM(Line))) /= 32) THEN 
+                        CollectionEntityFlag = 1
+                        InCollectionEntity = ADJUSTL(TRIM(Line(33:)))
+                        InCollectionEntity = Replace_Text(InCollectionEntity,'/','-')
+                    ELSE
+                        WRITE(6,*) 'Warning - No client detected in CIF     ', InputFile
+                        IF (InitialiseFlag == 'y') WRITE(55,*) 'No client detected for file          --  ',InputFile
+                    END IF
                 END IF
                 
                 !Cell information
@@ -127,21 +144,25 @@ OPEN(33, FILE = InputFile, STATUS = 'OLD')
 
 CLOSE(33)
 
+IF (InitialiseFlag == 'y') CLOSE(55)
+
 
 IF (CollectionDateFlag == 0) InCollectionDate = 'UNKNOWN'
-IF (Nameflag == 0) InSystematicName = 'UNKNOWN'
-IF (CollectionEntityFlag == 0) InCollectionEntity = 'UNKNOWN'
+IF (Nameflag == 0) InSystematicName = '*****************************MISSING*********************************'
+IF (CollectionEntityFlag == 0) InCollectionEntity = '???????'
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Read in database file !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-IF (Initialise=='n') THEN
-    OPEN(66, FILE = DatabaseFile, STATUS = 'OLD')
+
+
+OPEN(66, FILE = DatabaseFile, STATUS = 'OLD')
+
+!Read Number of Database Entries
     
-    !Read Number of Database Entries
-        
-        READ(66,*) NDatabaseEntries
+READ(66,*) NDatabaseEntries
+IF (NDatabaseEntries /=0) THEN
         READ(66,*) !READ BLANK
         READ(66,*) !READ BLANK
         READ(66,*) !READ BLANK
@@ -149,16 +170,34 @@ IF (Initialise=='n') THEN
     
     !Loop over number of entries and read information
         DO DBE = 1,NDatabaseEntries
-            READ(66,*) DBCollectionCode(DBE), DBCollectionDate(DBE), DBCollectionEntity(DBE), DBSystematicName(DBE), DBa(DBE), DBb(DBE), DBc(DBE), DBAlpha(DBE), DBBeta(DBE), DBGamma(DBE), DBVolume(DBE)
+            READ(66,'(A)') BIGLINE
+            BIGLINE = Replace_Text(BIGLINE,',','~~')
+            READ(BIGLINE,*) DBCollectionCode(DBE), DBCollectionDate(DBE),  DBCollectionEntity(DBE), DBSystematicName(DBE), DBa(DBE), DBb(DBE), DBc(DBE), DBAlpha(DBE), DBBeta(DBE), DBGamma(DBE), DBVolume(DBE)
+            DBSystematicName(DBE) = ADJUSTL(TRIM(Replace_Text(DBSystematicName(DBE),'~~',',')))
+    
+            IF (InCollectionCode == DBCollectionCode(DBE)) THEN
+                WRITE(6,*) '**********Duplicate CIF code found for    ', InputFile, '   ***********'
+                WRITE(6,*) 'Would you like to continue? (y/n)'
+                READ(5,*) DCIFYoN
+                DO WHILE (DCIFYoN/='y' .AND. DCIFYoN/='n')
+                    WRITE(6,*)
+                    WRITE(6,*) 'Lets try that again Chief'
+                    WRITE(6,*) 'Would you like to continue? (y/n)'
+                    READ(5,*) DCIFYoN
+                END DO
+                IF (DCIFYoN == 'n') STOP
+            END IF
+    
+    
         END DO
     
     CLOSE(66)
-
-
     
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Set Tolerances for params !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    
+    
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Set Tolerances for params !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     
     
     IF (quickflag /= 'y') THEN
@@ -273,7 +312,7 @@ IF (Initialise=='n') THEN
     
     IF ( quickflag /= 'y') THEN
         IF (SimilarityCount > 0) THEN
-
+    
             WRITE(6,*) 'Similarities:' 
             WRITE(6,*) 
             
@@ -305,63 +344,59 @@ IF (Initialise=='n') THEN
             WRITE(6,*) 
         END IF
     END IF
-    
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Write out final database file !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-ELSE
+ELSE 
+    CLOSE(66)
 
-    NDatabaseEntries = 0
-
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Write out final database file !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 END IF
 
-IF ( quickflag /= 'y') THEN
-    WRITE(6,*) 'Would you like to add this entry to the Database? (y/n)'
-    READ(5,*) YoN
-    DO WHILE(YoN /= 'y' .AND. YoN /= 'n')
-        WRITE(6,*)
-        WRITE(6,*) 'Lets try that again Chief'
+    IF ( quickflag /= 'y') THEN
         WRITE(6,*) 'Would you like to add this entry to the Database? (y/n)'
         READ(5,*) YoN
-    END DO
-    IF (YoN == 'y') THEN
-        WRITE(6,*)
-        WRITE(6,*) 'Are you sure you want to add this entry (y/n)'
-        READ(5,*) RYoN
-        DO WHILE (RYoN /= 'y' .AND. RYoN /= 'n')
+        DO WHILE(YoN /= 'y' .AND. YoN /= 'n')
             WRITE(6,*)
             WRITE(6,*) 'Lets try that again Chief'
-            WRITE(6,*) 'Are you sure you want this entry (y/n)'
-            READ(5,*) RYoN
+            WRITE(6,*) 'Would you like to add this entry to the Database? (y/n)'
+            READ(5,*) YoN
         END DO
+        IF (YoN == 'y') THEN
+            WRITE(6,*)
+            WRITE(6,*) 'Are you sure you want to add this entry (y/n)'
+            READ(5,*) RYoN
+            DO WHILE (RYoN /= 'y' .AND. RYoN /= 'n')
+                WRITE(6,*)
+                WRITE(6,*) 'Lets try that again Chief'
+                WRITE(6,*) 'Are you sure you want this entry (y/n)'
+                READ(5,*) RYoN
+            END DO
+        END IF
+    
+    ELSE
+    
+        YoN = 'y'; RYoN = 'y'
+    
     END IF
 
-ELSE
 
-    YoN = 'y'; RYoN = 'y'
-
-END IF
-
+    
 IF (YoN == 'y' .AND. RYoN == 'y') THEN
 
-    !CALL SYSTEM('rm '//TRIM(ADJUSTL(DatabaseFile))) !Not neccesary to delete file as it is rewritten anyways
-
-    OPEN(66, FILE = DatabaseFile, STATUS = 'UNKNOWN')
+    OPEN(66, FILE = DatabaseFile, STATUS = 'OLD')
     WRITE(66,'(I0)') NDatabaseEntries + 1
     WRITE(66,*)
-    WRITE(66,*) '  CODE |  COLLDATE  |     PERSON     |              FORMULA          |    a    |    b    |    c    |  alpha  |   beta   |  gamma  |  Volume  |'
+    WRITE(66,*) '| CODE |     COLL. DATE    |   PERSON   |                                                 FORMULA                                            |    a    |    b    |    c    |  alpha  |   beta   |  gamma  |  Volume  |'
     WRITE(66,*)
 
     !Loop over existing entries
-    IF (Initialise == 'n') THEN
-        DO DBE = 1, NDatabaseEntries
-            WRITE(66,'(A7, A3, A8, A3, A4, A3, A40, A3, F7.3, A3, F7.3, A3, F7.3, A3, F7.3, A3, F7.3, A3, F7.3, A3, F9.3)') ADJUSTL(TRIM(DBCollectionCode(DBE))), '   ', ADJUSTL(TRIM(DBCollectionDate(DBE))), '   ', ADJUSTL(TRIM(DBCollectionEntity(DBE))), '   ', ADJUSTL(TRIM(DBSystematicName(DBE))), '   ', DBa(DBE), '  ', DBb(DBE), '   ', DBc(DBE), '   ', DBalpha(DBE), '   ', DBbeta(DBE), '   ', DBGamma(DBE), '   ', DBVolume(DBE)
-        END DO
-    END IF
+    DO DBE = 1, NDatabaseEntries
+            WRITE(66,'(A7, A3, A10, A3, A15, A3, A100, A3, F7.3, A3, F7.3, A3, F7.3, A3, F7.3, A3, F7.3, A3, F7.3, A3, F9.3)') ADJUSTL(TRIM(DBCollectionCode(DBE))), '   ' , ADJUSTL(TRIM(DBCollectionDate(DBE))), '   ', ADJUSTL(TRIM(DBCollectionEntity(DBE))), '   ', ADJUSTL(TRIM(DBSystematicName(DBE))), '   ', DBa(DBE), '  ', DBb(DBE), '   ', DBc(DBE), '   ', DBalpha(DBE), '   ', DBbeta(DBE), '   ', DBGamma(DBE), '   ', DBVolume(DBE)
+    END DO
 
     !Write extra entry to database
-    WRITE(66,'(A7, A3, A8, A3, A4, A3, A40, A3, F7.3, A3, F7.3, A3, F7.3, A3, F7.3, A3, F7.3, A3, F7.3, A3, F9.3)') ADJUSTL(TRIM(InCollectionCode)), '   ', ADJUSTL(TRIM(InCollectionDate)), '   ', ADJUSTL(TRIM(InCollectionEntity)), '   ', ADJUSTL(TRIM(InSystematicName)), '   ', Ina, '   ', Inb, '   ', Inc, '   ', Inalpha, '   ', Inbeta, '   ', InGamma, '   ', InVolume
-    WRITE(6,'(A7, A3, A8, A3, A4, A3, A40, A3, F7.3, A3, F7.3, A3, F7.3, A3, F7.3, A3, F7.3, A3, F7.3, A3, F9.3)') ADJUSTL(TRIM(InCollectionCode)), '   ', ADJUSTL(TRIM(InCollectionDate)), '   ', ADJUSTL(TRIM(InCollectionEntity)), '   ', ADJUSTL(TRIM(InSystematicName)), '   ', Ina, '   ', Inb, '   ', Inc, '   ', Inalpha, '   ', Inbeta, '   ', InGamma, '   ', InVolume
+    WRITE(66,'(A7, A3, A10, A3, A15, A3, A100, A3, F7.3, A3, F7.3, A3, F7.3, A3, F7.3, A3, F7.3, A3, F7.3, A3, F9.3)') ADJUSTL(TRIM(InCollectionCode)), '   ' , ADJUSTL(TRIM(InCollectionDate)), '   ', ADJUSTL(TRIM(InCollectionEntity)), '   ', ADJUSTL(TRIM(InSystematicName)), '   ', Ina, '   ', Inb, '   ', Inc, '   ', Inalpha, '   ', Inbeta, '   ', InGamma, '   ', InVolume
+    !WRITE(6,'(A7, A3, A10, A3, A15, A3, A40, A3, F7.3, A3, F7.3, A3, F7.3, A3, F7.3, A3, F7.3, A3, F7.3, A3, F9.3)') ADJUSTL(TRIM(InCollectionCode)), '   ' , ADJUSTL(TRIM(InCollectionDate)), '   ', ADJUSTL(TRIM(InCollectionEntity)), '   ', ADJUSTL(TRIM(InSystematicName)), '   ', Ina, '   ', Inb, '   ', Inc, '   ', Inalpha, '   ', Inbeta, '   ', InGamma, '   ', InVolume
 
     CLOSE(66)
 
@@ -385,7 +420,8 @@ INTEGER             :: i, nt, nr
 
 outs = s ; nt = LEN_TRIM(text) ; nr = LEN_TRIM(rep)
 DO
-   i = INDEX(outs,text(:nt)) ; IF (i == 0) EXIT
+   i = INDEX(outs,text(:nt)) 
+   IF (i == 0) EXIT
    outs = outs(:i-1) // rep(:nr) // outs(i+nt:)
 END DO
 END FUNCTION Replace_Text
@@ -423,5 +459,47 @@ ELSE
 END IF
 
 END FUNCTION RangeFall
+
+INTEGER FUNCTION Tally (s,text)
+CHARACTER(*) :: s, text
+INTEGER :: i, nt
+
+Tally = 0 ; nt = LEN_TRIM(text)
+DO i = 1,LEN(s)-nt+1
+   IF (s(i:i+nt-1) == text(:nt)) Tally = Tally+1
+END DO
+END FUNCTION Tally
+
+FUNCTION strcompress( input_string, n ) RESULT ( output_string ) 
+    ! -- Arguments 
+    CHARACTER( * ), INTENT( IN )  :: input_string 
+    INTEGER,        INTENT( OUT ) :: n 
+    ! -- Function result 
+    CHARACTER( LEN( input_string ) ) :: output_string 
+    ! -- Local parameters 
+    INTEGER,        PARAMETER :: IACHAR_SPACE = 32, & 
+                                 IACHAR_TAB   = 9 
+    ! -- Local variables 
+    INTEGER :: i 
+    INTEGER :: iachar_character 
+    ! -- Initialise output string 
+    output_string = ' ' 
+    ! -- Initialise output string "useful" length counter 
+    n = 0 
+    ! -- Loop over string elements 
+    DO i = 1, LEN( input_string ) 
+      ! -- Convert the current character to its position 
+      ! -- in the ASCII collating sequence 
+      iachar_character = IACHAR( input_string( i:i ) ) 
+      ! -- If the character is NOT a space ' ' or a tab '->|' 
+      ! -- copy it to the output string. 
+      IF ( iachar_character /= IACHAR_SPACE .AND. & 
+           iachar_character /= IACHAR_TAB         ) THEN 
+        n = n + 1 
+        output_string( n:n ) = input_string( i:i ) 
+      END IF 
+    END DO 
+END FUNCTION strcompress 
+
 
 END PROGRAM DBBuild
