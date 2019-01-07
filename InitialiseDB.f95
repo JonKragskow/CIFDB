@@ -28,8 +28,8 @@ OPEN(33, FILE = TRIM(ADJUSTL(CIFListFile)),STATUS = 'OLD')
 
     DO J = 1,NCIFs
         READ(33,'(A)') CIFList(J) 
-            CALL SYSTEM('DBBuild '//trim(adjustl(CIFList(J)))//' CIFDATABASE.txt y y')!DOS`
-            !CALL SYSTEM('./DBBuild '//trim(adjustl(CIFList(J)))//' CIFDATABASE.txt y y')!Unix
+            !CALL SYSTEM('DBBuild '//trim(adjustl(CIFList(J)))//' CIFDATABASE.txt y y')!DOS`
+            CALL SYSTEM('./DBBuild '//trim(adjustl(CIFList(J)))//' CIFDATABASE.txt y y')!Unix
             !WRITE(6,*) './DBBuild '//trim(adjustl(CIFList(J)))//' CIFDATABASE.txt y y'!debug
     END DO
 

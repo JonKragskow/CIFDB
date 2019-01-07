@@ -4,8 +4,8 @@ CHARACTER(LEN=100) :: InputFile, Line, InSystematicName, Cdummy, INaChar, INbCha
 CHARACTER(LEN=250) :: BIGLINE
 CHARACTER(LEN = 10) :: YoN, RYoN, TolYoN, QuickFlag,InitialiseFlag,DCIFYoN
 CHARACTER(LEN = 100), ALLOCATABLE ::  DBCollectionCode(:), DBCollectionEntity(:), DBSystematicName(:), DBCollectionDate(:)
-CHARACTER(LEN = 1), ALLOCATABLE :: aTolFlag(:), bTolFlag(:), cTolFlag(:), AlphaTolFlag(:), BetaTolFlag(:), GammaTolFlag(:), VolTolFlag(:), TolFlagArray(:,:)
-INTEGER :: Nameflag,NDatabaseEntries, CollectionDateFlag, CollectionEntityFlag, DBE, SimilarityCount,intdummy
+INTEGER :: Nameflag,NDatabaseEntries, CollectionDateFlag, CollectionEntityFlag, DBE, SimilarityFlag, intdummy
+INTEGER, ALLOCATABLE :: SimilarityCount(:,:)
 REAL(KIND = 8) :: INa, INb, INc, INAlpha, INBeta, INGamma, INVolume, aTol, bTol, cTol, alphaTol, betaTol, gammaTol, VolTol, DefaultTol
 REAL(KIND = 8), ALLOCATABLE :: DBa(:), DBb(:), DBc(:), DBAlpha(:), DBBeta(:),DBGamma(:), DBVolume(:)
 
@@ -20,41 +20,60 @@ END IF
 call GET_COMMAND_ARGUMENT(2,DatabaseFile)
 call GET_COMMAND_ARGUMENT(3,QuickFlag)
 
-IF (QuickFlag=='y') THEN
-    QuickFlag='y'
-ELSE
-    QuickFlag='n'
-END IF
+!Quick flag to add/check entries with standard tolerances
+IF (QuickFlag /= 'y') QuickFlag = 'n'
 
-!Secret flag for InitialiseDB to use to create 1st entry
+!Secret flag for InitialiseDB to skip printouts and checking
 call GET_COMMAND_ARGUMENT(4,InitialiseFlag)
 
-IF (InitialiseFlag=='y') THEN
-    InitialiseFlag='y'
-    OPEN(55, FILE = 'DBERRORS.txt', STATUS = 'UNKNOWN',ACCESS = 'APPEND')
+IF (InitialiseFlag == 'y') THEN
+    OPEN(55, FILE = 'DBERRORS.txt', STATUS = 'UNKNOWN',ACCESS = 'APPEND') !Open error file
 ELSE
     InitialiseFlag='n'
 END IF
 
 
-!!!!!!! Write some gubbins
+!!!!!!! Self Promotion
 IF (InitialiseFlag /= 'y') THEN
-    WRITE(6,*) '        ---------------------'
-    WRITE(6,*) '            DBBuild V2.0'
-    WRITE(6,*) '        By Jon G. C. Kragskow'
-    WRITE(6,*) '        ---------------------'
+WRITE(6,*)'                           /\             '
+WRITE(6,*)'                          /  \            '
+WRITE(6,*)'                         /    \           '
+WRITE(6,*)'                        /      \          '
+WRITE(6,*)'                       /        \         '
+WRITE(6,*)'                      /          \        '
+WRITE(6,*)'                     /            \       '
+WRITE(6,*)'                    /              \      '
+WRITE(6,*)'                   /                \     '
+WRITE(6,*)'                  /                  \    '
+WRITE(6,*)'                 /       CIFDB        \   '
+WRITE(6,*)'                /     DBBuild V2.0     \  '
+WRITE(6,*)'               /                        \ '
+WRITE(6,*)'               \  By Jon G. C. Kragskow / '
+WRITE(6,*)'                \                      /  '
+WRITE(6,*)'                 \                    /   '
+WRITE(6,*)'                  \                  /    '
+WRITE(6,*)'                   \                /     '
+WRITE(6,*)'                    \              /      '
+WRITE(6,*)'                     \            /       '
+WRITE(6,*)'                      \          /        '
+WRITE(6,*)'                       \        /         '
+WRITE(6,*)'                        \      /          '
+WRITE(6,*)'                         \    /           '
+WRITE(6,*)'                          \  /            '
+WRITE(6,*)'                           \/             '
+
 END IF
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Read input CIF !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-!Set flags for optional fields
+!Set tracking flags for whether some fields are present or not
 NameFlag = 0
 CollectionDateFlag = 0
 CollectionEntityFlag = 0
 
-
+!Open input CIF and read out data fields
 OPEN(33, FILE = InputFile, STATUS = 'OLD')
 
     DO WHILE(.true.)
@@ -116,8 +135,8 @@ OPEN(33, FILE = InputFile, STATUS = 'OLD')
                     READ(33,*) Cdummy,INGammaChar
                     READ(33,*) Cdummy,INVolumeChar
     
-                    !read in and keep standard deviations for database??
-                    !Ask Fabs but probably!
+                    !Read in and keep standard deviations for database??
+                    !Ask Fabs
                     !Character cut up to (
                     !Replace ( with nothing and then read number
     
@@ -137,16 +156,15 @@ OPEN(33, FILE = InputFile, STATUS = 'OLD')
                     READ(INGammaChar,*) INGamma
                     READ(INVolumeChar,*) INVolume
     
-    
                 END IF
     END DO
     99 CONTINUE
 
 CLOSE(33)
 
-IF (InitialiseFlag == 'y') CLOSE(55)
+IF (InitialiseFlag == 'y') CLOSE(55) !Close error file
 
-
+!Error reporting in Database File
 IF (CollectionDateFlag == 0) InCollectionDate = 'UNKNOWN'
 IF (Nameflag == 0) InSystematicName = '*****************************MISSING*********************************'
 IF (CollectionEntityFlag == 0) InCollectionEntity = '???????'
@@ -159,22 +177,23 @@ IF (CollectionEntityFlag == 0) InCollectionEntity = '???????'
 
 OPEN(66, FILE = DatabaseFile, STATUS = 'OLD')
 
-!Read Number of Database Entries
-    
-READ(66,*) NDatabaseEntries
-IF (NDatabaseEntries /=0) THEN
+
+    READ(66,*) NDatabaseEntries  !Read Number of Database Entries
+    IF (NDatabaseEntries /=0) THEN !If Database entries == 0 then nothing to read
         READ(66,*) !READ BLANK
         READ(66,*) !READ BLANK
         READ(66,*) !READ BLANK
-        ALLOCATE(DBCollectionCode(NDatabaseEntries), DBCollectionDate(NDatabaseEntries), DBCollectionEntity(NDatabaseEntries), DBSystematicName(NDatabaseEntries), DBa(NDatabaseEntries), DBb(NDatabaseEntries), DBc(NDatabaseEntries), DBAlpha(NDatabaseEntries), DBBeta(NDatabaseEntries), DBGamma(NDatabaseEntries), DBVolume(NDatabaseEntries), aTolFlag(NDatabaseEntries), bTolFlag(NDatabaseEntries), cTolFlag(NDatabaseEntries), AlphaTolFlag(NDatabaseEntries), BetaTolFlag(NDatabaseEntries), GammaTolFlag(NDatabaseEntries), VolTolFlag(NDatabaseEntries),TolFlagArray(NDatabaseEntries,7))
+        ALLOCATE(DBCollectionCode(NDatabaseEntries), DBCollectionDate(NDatabaseEntries), DBCollectionEntity(NDatabaseEntries), DBSystematicName(NDatabaseEntries), DBa(NDatabaseEntries), DBb(NDatabaseEntries), DBc(NDatabaseEntries), DBAlpha(NDatabaseEntries), DBBeta(NDatabaseEntries), DBGamma(NDatabaseEntries), DBVolume(NDatabaseEntries))
     
     !Loop over number of entries and read information
+    !Hacky way of reading in names with commas out of the databse file
         DO DBE = 1,NDatabaseEntries
             READ(66,'(A)') BIGLINE
-            BIGLINE = Replace_Text(BIGLINE,',','~~')
+            BIGLINE = Replace_Text(BIGLINE,',','~~') !Replace commas with ~~
             READ(BIGLINE,*) DBCollectionCode(DBE), DBCollectionDate(DBE),  DBCollectionEntity(DBE), DBSystematicName(DBE), DBa(DBE), DBb(DBE), DBc(DBE), DBAlpha(DBE), DBBeta(DBE), DBGamma(DBE), DBVolume(DBE)
-            DBSystematicName(DBE) = ADJUSTL(TRIM(Replace_Text(DBSystematicName(DBE),'~~',',')))
+            DBSystematicName(DBE) = ADJUSTL(TRIM(Replace_Text(DBSystematicName(DBE),'~~',','))) !Replace ~~ with commas
     
+            !Check for and report duplicate CIF then prompt user
             IF (InCollectionCode == DBCollectionCode(DBE)) THEN
                 WRITE(6,*) '**********Duplicate CIF code found for    ', InputFile, '   ***********'
                 WRITE(6,*) 'Would you like to continue? (y/n)'
@@ -199,7 +218,7 @@ IF (NDatabaseEntries /=0) THEN
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Set Tolerances for params !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     
-    
+    !If quickflag ==y then skip user prompt for alternative tolerances
     IF (quickflag /= 'y') THEN
         DefaultTol = 0.05_8
         
@@ -243,93 +262,63 @@ IF (NDatabaseEntries /=0) THEN
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Find similar structures !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    
     !Cycle through entries and check each parameter against the database 
     
+    ALLOCATE(SimilarityCount(NDatabaseEntries,7)) !SimilarityCount(a,b,c,alpha,beta,gamma,volume)
+
+
     SimilarityCount = 0
     
     DO DBE = 1, NDatabaseEntries
     
-        IF (RangeFall(INa, DBa(DBE),aTol) == 'y') THEN
-            aTolFlag(DBE) = 'y'
-            SimilarityCount = SimilarityCount + 1
-        ELSE
-            aTolFlag(DBE) = 'n'
-        END IF
+        IF (RangeFall(INa, DBa(DBE),aTol) == 'y') SimilarityCount(DBE,1) = 1
     
-        IF (RangeFall(INb, DBb(DBE),bTol) == 'y') THEN
-            bTolFlag(DBE) = 'y'
-            SimilarityCount = SimilarityCount + 1
-        ELSE
-            bTolFlag(DBE) = 'n'
-        END IF
+        IF (RangeFall(INb, DBb(DBE),bTol) == 'y') SimilarityCount(DBE,2) = 1
     
-        IF (RangeFall(INc, DBc(DBE),cTol) == 'y') THEN
-            cTolFlag(DBE) = 'y'
-            SimilarityCount = SimilarityCount + 1
-        ELSE
-            cTolFlag(DBE) = 'n'
-        END IF
+        IF (RangeFall(INc, DBc(DBE),cTol) == 'y') SimilarityCount(DBE,3) = 1
     
-        IF (RangeFall(INalpha, DBalpha(DBE),alphaTol) == 'y') THEN
-            AlphaTolFlag(DBE) = 'y'
-            SimilarityCount = SimilarityCount + 1
-        ELSE
-            AlphaTolFlag(DBE) = 'n'
-        END IF
+        IF (RangeFall(INalpha, DBalpha(DBE),alphaTol) == 'y') SimilarityCount(DBE,4) = 1
+            
+        IF (RangeFall(INBeta, DBBeta(DBE),betaTol) == 'y') SimilarityCount(DBE,5) = 1
     
-        IF (RangeFall(INBeta, DBBeta(DBE),betaTol) == 'y') THEN
-            BetaTolFlag(DBE) = 'y'
-            SimilarityCount = SimilarityCount + 1
-        ELSE
-            BetaTolFlag(DBE) = 'n'
-        END IF
+        IF (RangeFall(INGamma, DBGamma(DBE),gammaTol) == 'y') SimilarityCount(DBE,6) = 1
     
-        IF (RangeFall(INGamma, DBGamma(DBE),gammaTol) == 'y') THEN
-            GammaTolFlag(DBE) = 'y'
-            SimilarityCount = SimilarityCount + 1
-        ELSE
-            GammaTolFlag(DBE) = 'n'
-        END IF
-    
-        IF (RangeFall(INVolume, DBVolume(DBE),VolTol) == 'y') THEN
-            VolTolFlag(DBE) = 'y'
-            SimilarityCount = SimilarityCount + 1
-        ELSE
-            VolTolFlag(DBE) = 'n'
-        END IF
+        IF (RangeFall(INVolume, DBVolume(DBE),VolTol) == 'y') SimilarityCount(DBE,7) = 1
     
     END DO
-    
-    !Make Tolerance flag arrays (y and n)
-    TolFlagArray(:,1) = aTolFlag
-    TolFlagArray(:,2) = bTolFlag
-    TolFlagArray(:,3) = cTolFlag
-    TolFlagArray(:,4) = alphaTolFlag
-    TolFlagArray(:,5) = betaTolFlag
-    TolFlagArray(:,6) = gammaTolFlag
-    TolFlagArray(:,7) = volTolFlag
-    
+
+    !Add on Similarities
+    DO DBE = 1, NDatabaseEntries
+
+        IF (SimilarityCount(DBE,1) == 1 .AND. SimilarityCount(DBE,2) == 1 .AND. SimilarityCount(DBE,3) == 1 ) SimilarityFlag = 1
+
+        IF (SimilarityCount(DBE,4) == 1 .AND. SimilarityCount(DBE,5) == 1 .AND. SimilarityCount(DBE,6) == 1) SimilarityFlag = 1
+
+        IF (SimilarityCount(DBE,7) == 1) SimilarityFlag = 1
+
+    END DO
     
     IF ( quickflag /= 'y') THEN
-        IF (SimilarityCount > 0) THEN
+        IF (SimilarityFlag > 0) THEN
     
             WRITE(6,*) 'Similarities:' 
             WRITE(6,*) 
             
                 DO DBE = 1, NDatabaseEntries
-                    IF (TolFlagArray(DBE,1) == 'y' .AND. TolFlagArray(DBE,2) == 'y' .AND. TolFlagArray(DBE,3) == 'y') THEN
+                    IF (SimilarityCount(DBE,1) == 1 .AND. SimilarityCount(DBE,2) == 1 .AND. SimilarityCount(DBE,3) == 1) THEN
                         WRITE(6,'(A9, F7.3, A2, F7.3, A2, F7.3, A23, A7)') 'a, b, c (', Ina,', ', Inb,', ', Inc, ') are close to that of ', DBCollectionCode(DBE)
                         WRITE(6,'(A9, F7.3, A2, F7.3, A2, F7.3, A1)') 'a, b, c (', DBa(DBE),', ', DBb(DBE),', ', DBc(DBE),')'
                         WRITE(6,*)
                     END IF
             
-                    IF (TolFlagArray(DBE,4) == 'y' .AND. TolFlagArray(DBE,5) == 'y' .AND. TolFlagArray(DBE,6) == 'y') THEN
+                    IF (SimilarityCount(DBE,4) == 1 .AND. SimilarityCount(DBE,5) == 1 .AND. SimilarityCount(DBE,6) == 1) THEN
                         WRITE(6,'(A20, F7.3, A2, F7.3, A2, F7.3, A23, A7)') 'alpha, beta, gamma (', InAlpha,', ', InBeta,', ', INGamma, ') are close to that of ', DBCollectionCode(DBE)
                         WRITE(6,'(A20, F7.3, A2, F7.3, A2, F7.3, A1)') 'alpha, beta, gamma (', DBAlpha(DBE),', ', DBBeta(DBE),', ', DBGamma(DBE),')'
                         WRITE(6,*)
                     END IF
             
-                    IF (TolFlagArray(DBE,7) == 'y') THEN
+                    IF (SimilarityCount(DBE,7) == 1) THEN
                         WRITE(6,'(A8, F8.3, A22, A7)') 'Volume (', InVolume, ') is close to that of ', DBCollectionCode(DBE)
                         WRITE(6,'(A8, F8.3, A1)') 'Volume (', DBVolume(DBE),')'
                         WRITE(6,*)
@@ -345,39 +334,41 @@ IF (NDatabaseEntries /=0) THEN
         END IF
     END IF
 ELSE 
-    CLOSE(66)
+    CLOSE(66) !close cifdatabase.txt command for database with no entries
+END IF
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Write out final database file !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-END IF
 
-    IF ( quickflag /= 'y') THEN
+
+IF ( quickflag /= 'y') THEN
+    WRITE(6,*) 'Would you like to add this entry to the Database? (y/n)'
+    READ(5,*) YoN
+    DO WHILE(YoN /= 'y' .AND. YoN /= 'n')
+        WRITE(6,*)
+        WRITE(6,*) 'Lets try that again Chief'
         WRITE(6,*) 'Would you like to add this entry to the Database? (y/n)'
         READ(5,*) YoN
-        DO WHILE(YoN /= 'y' .AND. YoN /= 'n')
+    END DO
+    IF (YoN == 'y') THEN
+        WRITE(6,*)
+        WRITE(6,*) 'Are you sure you want to add this entry (y/n)'
+        READ(5,*) RYoN
+        DO WHILE (RYoN /= 'y' .AND. RYoN /= 'n')
             WRITE(6,*)
             WRITE(6,*) 'Lets try that again Chief'
-            WRITE(6,*) 'Would you like to add this entry to the Database? (y/n)'
-            READ(5,*) YoN
-        END DO
-        IF (YoN == 'y') THEN
-            WRITE(6,*)
-            WRITE(6,*) 'Are you sure you want to add this entry (y/n)'
+            WRITE(6,*) 'Are you sure you want this entry (y/n)'
             READ(5,*) RYoN
-            DO WHILE (RYoN /= 'y' .AND. RYoN /= 'n')
-                WRITE(6,*)
-                WRITE(6,*) 'Lets try that again Chief'
-                WRITE(6,*) 'Are you sure you want this entry (y/n)'
-                READ(5,*) RYoN
-            END DO
-        END IF
-    
-    ELSE
-    
-        YoN = 'y'; RYoN = 'y'
-    
+        END DO
     END IF
+
+ELSE
+
+    YoN = 'y'; RYoN = 'y'
+
+END IF
 
 
     
@@ -410,34 +401,35 @@ CLOSE(66)
 
 CONTAINS
 
-FUNCTION Replace_Text (s,text,rep)  RESULT(outs)
+FUNCTION Replace_Text (s,old,new)  RESULT(outs)
 
 !http://fortranwiki.org/fortran/show/String_Functions
 
-CHARACTER(*)        :: s,text,rep
+CHARACTER(*)        :: s,old,new
 CHARACTER(LEN(s)+100) :: outs     ! provide outs with extra 100 char len
-INTEGER             :: i, nt, nr
+INTEGER             :: i, lenold, lennew
 
-outs = s ; nt = LEN_TRIM(text) ; nr = LEN_TRIM(rep)
-DO
-   i = INDEX(outs,text(:nt)) 
-   IF (i == 0) EXIT
-   outs = outs(:i-1) // rep(:nr) // outs(i+nt:)
+outs = s ; lenold = LEN_TRIM(old) ; lennew = LEN_TRIM(new)
+DO WHILE(.TRUE.)
+   i = INDEX(outs,old(:lenold))  !gives item number for old text in string
+   IF (i == 0) EXIT !if string not found then leave loop
+   outs = outs(:i-1) // new(:lennew) // outs(i+lenold:) !concatenate new text inbetween pieces of old text
 END DO
 END FUNCTION Replace_Text
 
 
 FUNCTION Cut_To_Char (s,cutchar)  RESULT(outs)
-    !http://fortranwiki.org/fortran/show/String_Functions
-
+    !Truncates a string at a given character
+    !e.g Cut_To_Char(Hello_World,_) = Hello
 
 CHARACTER(*)        :: s,cutchar
 CHARACTER(LEN(s)+100) :: outs
 INTEGER             :: i
 
 outs = s 
-DO
-   i = INDEX(outs,cutchar) ; IF (i == 0) EXIT
+DO WHILE(.TRUE.)
+   i = INDEX(outs,cutchar) 
+   IF (i == 0) EXIT
    outs = outs(1:i-1)
 END DO
 END FUNCTION Cut_To_Char
@@ -460,17 +452,7 @@ END IF
 
 END FUNCTION RangeFall
 
-INTEGER FUNCTION Tally (s,text)
-CHARACTER(*) :: s, text
-INTEGER :: i, nt
-
-Tally = 0 ; nt = LEN_TRIM(text)
-DO i = 1,LEN(s)-nt+1
-   IF (s(i:i+nt-1) == text(:nt)) Tally = Tally+1
-END DO
-END FUNCTION Tally
-
-FUNCTION strcompress( input_string, n ) RESULT ( output_string ) 
+FUNCTION strcompress( input_string, n ) RESULT ( output_string ) !Removes spaces from strings
     ! -- Arguments 
     CHARACTER( * ), INTENT( IN )  :: input_string 
     INTEGER,        INTENT( OUT ) :: n 
@@ -499,7 +481,8 @@ FUNCTION strcompress( input_string, n ) RESULT ( output_string )
         output_string( n:n ) = input_string( i:i ) 
       END IF 
     END DO 
-END FUNCTION strcompress 
+
+END FUNCTION strcompress
 
 
 END PROGRAM DBBuild

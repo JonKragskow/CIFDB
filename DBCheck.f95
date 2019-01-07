@@ -4,8 +4,8 @@ CHARACTER(LEN=100) :: INaChar, INbChar, INcChar, INAlphaChar, INBetaChar, INGamm
 CHARACTER(LEN=250) :: BIGLINE
 CHARACTER(LEN = 10) :: TolYoN
 CHARACTER(LEN = 100), ALLOCATABLE ::  DBCollectionCode(:), DBCollectionDate(:), DBCollectionEntity(:), DBSystematicName(:)
-CHARACTER(LEN = 1), ALLOCATABLE :: aTolFlag(:), bTolFlag(:), cTolFlag(:), AlphaTolFlag(:), BetaTolFlag(:), GammaTolFlag(:), VolTolFlag(:), TolFlagArray(:,:)
-INTEGER :: NDatabaseEntries, DBE, SimilarityCount
+INTEGER :: NDatabaseEntries, DBE, SimilarityFlag
+INTEGER, ALLOCATABLE :: SimilarityCount(:,:)
 REAL(KIND = 8) :: INa, INb, INc, INAlpha, INBeta, INGamma, INVolume, aTol, bTol, cTol, alphaTol, betaTol, gammaTol, VolTol, DefaultTol
 REAL(KIND = 8), ALLOCATABLE :: DBa(:), DBb(:), DBc(:), DBAlpha(:), DBBeta(:),DBGamma(:), DBVolume(:)
 
@@ -38,10 +38,32 @@ READ(INVolumeChar,*) InVolume
 
 !!!!!!! Write some gubbins
 
-WRITE(6,*) '        ---------------------'
-WRITE(6,*) '            CIFDB V2.0'
-WRITE(6,*) '        By Jon G. C. Kragskow'
-WRITE(6,*) '        ---------------------'
+WRITE(6,*)'                           /\             '
+WRITE(6,*)'                          /  \            '
+WRITE(6,*)'                         /    \           '
+WRITE(6,*)'                        /      \          '
+WRITE(6,*)'                       /        \         '
+WRITE(6,*)'                      /          \        '
+WRITE(6,*)'                     /            \       '
+WRITE(6,*)'                    /              \      '
+WRITE(6,*)'                   /                \     '
+WRITE(6,*)'                  /                  \    '
+WRITE(6,*)'                 /       CIFDB        \   '
+WRITE(6,*)'                /     DBCheck V2.0     \  '
+WRITE(6,*)'               /                        \ '
+WRITE(6,*)'               \  By Jon G. C. Kragskow / '
+WRITE(6,*)'                \                      /  '
+WRITE(6,*)'                 \                    /   '
+WRITE(6,*)'                  \                  /    '
+WRITE(6,*)'                   \                /     '
+WRITE(6,*)'                    \              /      '
+WRITE(6,*)'                     \            /       '
+WRITE(6,*)'                      \          /        '
+WRITE(6,*)'                       \        /         '
+WRITE(6,*)'                        \      /          '
+WRITE(6,*)'                         \    /           '
+WRITE(6,*)'                          \  /            '
+WRITE(6,*)'                           \/             '
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Read in database file !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -54,7 +76,7 @@ OPEN(66, FILE = DatabaseFile, STATUS = 'OLD')
     READ(66,*) !READ BLANK
     READ(66,*) !READ BLANK
     READ(66,*) !READ BLANK
-    ALLOCATE(DBCollectionCode(NDatabaseEntries), DBCollectionDate(NDatabaseEntries), DBCollectionEntity(NDatabaseEntries), DBSystematicName(NDatabaseEntries), DBa(NDatabaseEntries), DBb(NDatabaseEntries), DBc(NDatabaseEntries), DBAlpha(NDatabaseEntries), DBBeta(NDatabaseEntries), DBGamma(NDatabaseEntries), DBVolume(NDatabaseEntries), aTolFlag(NDatabaseEntries), bTolFlag(NDatabaseEntries), cTolFlag(NDatabaseEntries), AlphaTolFlag(NDatabaseEntries), BetaTolFlag(NDatabaseEntries), GammaTolFlag(NDatabaseEntries), VolTolFlag(NDatabaseEntries),TolFlagArray(NDatabaseEntries,7))
+    ALLOCATE(DBCollectionCode(NDatabaseEntries), DBCollectionDate(NDatabaseEntries), DBCollectionEntity(NDatabaseEntries), DBSystematicName(NDatabaseEntries), DBa(NDatabaseEntries), DBb(NDatabaseEntries), DBc(NDatabaseEntries), DBAlpha(NDatabaseEntries), DBBeta(NDatabaseEntries), DBGamma(NDatabaseEntries), DBVolume(NDatabaseEntries))
 
 !Loop over number of entries and read information
     DO DBE = 1,NDatabaseEntries
@@ -116,107 +138,73 @@ END IF
 
 !cycle through database structures
 
+ALLOCATE(SimilarityCount(NDatabaseEntries,7)) !SimilarityCount(a,b,c,alpha,beta,gamma,volume)
+
+
 SimilarityCount = 0
 
 DO DBE = 1, NDatabaseEntries
 
-    IF (RangeFall(INa, DBa(DBE),aTol) == 'y') THEN
-        aTolFlag(DBE) = 'y'
-        SimilarityCount = SimilarityCount + 1
-    ELSE
-        aTolFlag(DBE) = 'n'
-    END IF
+    IF (RangeFall(INa, DBa(DBE),aTol) == 'y') SimilarityCount(DBE,1) = 1
 
-    IF (RangeFall(INb, DBb(DBE),bTol) == 'y') THEN
-        bTolFlag(DBE) = 'y'
-        SimilarityCount = SimilarityCount + 1
-    ELSE
-        bTolFlag(DBE) = 'n'
-    END IF
+    IF (RangeFall(INb, DBb(DBE),bTol) == 'y') SimilarityCount(DBE,2) = 1
 
-    IF (RangeFall(INc, DBc(DBE),cTol) == 'y') THEN
-        cTolFlag(DBE) = 'y'
-        SimilarityCount = SimilarityCount + 1
-    ELSE
-        cTolFlag(DBE) = 'n'
-    END IF
+    IF (RangeFall(INc, DBc(DBE),cTol) == 'y') SimilarityCount(DBE,3) = 1
 
-    IF (RangeFall(INalpha, DBalpha(DBE),alphaTol) == 'y') THEN
-        AlphaTolFlag(DBE) = 'y'
-        SimilarityCount = SimilarityCount + 1
-    ELSE
-        AlphaTolFlag(DBE) = 'n'
-    END IF
+    IF (RangeFall(INalpha, DBalpha(DBE),alphaTol) == 'y') SimilarityCount(DBE,4) = 1
+        
+    IF (RangeFall(INBeta, DBBeta(DBE),betaTol) == 'y') SimilarityCount(DBE,5) = 1
 
-    IF (RangeFall(INBeta, DBBeta(DBE),betaTol) == 'y') THEN
-        BetaTolFlag(DBE) = 'y'
-        SimilarityCount = SimilarityCount + 1
-    ELSE
-        BetaTolFlag(DBE) = 'n'
-    END IF
+    IF (RangeFall(INGamma, DBGamma(DBE),gammaTol) == 'y') SimilarityCount(DBE,6) = 1
 
-    IF (RangeFall(INGamma, DBGamma(DBE),gammaTol) == 'y') THEN
-        GammaTolFlag(DBE) = 'y'
-        SimilarityCount = SimilarityCount + 1
-    ELSE
-        GammaTolFlag(DBE) = 'n'
-    END IF
-
-    IF (RangeFall(INVolume, DBVolume(DBE),VolTol) == 'y') THEN
-        VolTolFlag(DBE) = 'y'
-        SimilarityCount = SimilarityCount + 1
-    ELSE
-        VolTolFlag(DBE) = 'n'
-    END IF
+    IF (RangeFall(INVolume, DBVolume(DBE),VolTol) == 'y') SimilarityCount(DBE,7) = 1
 
 END DO
 
-!Make Tolerance flag arrays (y and n)
-TolFlagArray(:,1) = aTolFlag
-TolFlagArray(:,2) = bTolFlag
-TolFlagArray(:,3) = cTolFlag
-TolFlagArray(:,4) = alphaTolFlag
-TolFlagArray(:,5) = betaTolFlag
-TolFlagArray(:,6) = gammaTolFlag
-TolFlagArray(:,7) = volTolFlag
-
-
-IF (SimilarityCount /= 0) THEN
+!Add on Similarities
+DO DBE = 1, NDatabaseEntries
     
-    WRITE(6,*) 'Similarities:'
+    IF (SimilarityCount(DBE,1) == 1 .AND. SimilarityCount(DBE,2) == 1 .AND. SimilarityCount(DBE,3) == 1 ) SimilarityFlag = 1
+
+    IF (SimilarityCount(DBE,4) == 1 .AND. SimilarityCount(DBE,5) == 1 .AND. SimilarityCount(DBE,6) == 1) SimilarityFlag = 1
+
+    IF (SimilarityCount(DBE,7) == 1) SimilarityFlag = 1
+
+END DO
+
+
+IF (SimilarityFlag > 0) THEN
+
+    WRITE(6,*) 'Similarities:' 
     WRITE(6,*) 
     
-    DO DBE = 1, NDatabaseEntries
-        IF (TolFlagArray(DBE,1) == 'y' .AND. TolFlagArray(DBE,2) == 'y' .AND. TolFlagArray(DBE,3) == 'y') THEN
-            WRITE(6,'(A9, F7.3, A2, F7.3, A2, F7.3, A23, A7)') 'a, b, c (', Ina,', ', Inb,', ', Inc, ') are close to that of ', DBCollectionCode(DBE)
-            WRITE(6,'(A9, F7.3, A2, F7.3, A2, F7.3, A1)') 'a, b, c (', DBa(DBE),', ', DBb(DBE),', ', DBc(DBE),')'
-            WRITE(6,*)
-        END IF
-
-        IF (TolFlagArray(DBE,4) == 'y' .AND. TolFlagArray(DBE,5) == 'y' .AND. TolFlagArray(DBE,6) == 'y') THEN
-            WRITE(6,'(A20, F7.3, A2, F7.3, A2, F7.3, A23, A7)') 'alpha, beta, gamma (', InAlpha,', ', InBeta,', ', INGamma, ') are close to that of ', DBCollectionCode(DBE)
-            WRITE(6,'(A20, F7.3, A2, F7.3, A2, F7.3, A1)') 'alpha, beta, gamma (', DBAlpha(DBE),', ', DBBeta(DBE),', ', DBGamma(DBE),')'
-            WRITE(6,*)
-        END IF
-
-        IF (TolFlagArray(DBE,7) == 'y') THEN
-            WRITE(6,'(A8, F8.3, A22, A7)') 'Volume (', InVolume, ') is close to that of ', DBCollectionCode(DBE)
-            WRITE(6,'(A8, F8.3, A1)') 'Volume (', DBVolume(DBE),')'
-            WRITE(6,*)
-        END IF
-
-
-    END DO
-
+        DO DBE = 1, NDatabaseEntries
+            IF (SimilarityCount(DBE,1) == 1 .AND. SimilarityCount(DBE,2) == 1 .AND. SimilarityCount(DBE,3) == 1) THEN
+                WRITE(6,'(A9, F7.3, A2, F7.3, A2, F7.3, A23, A7)') 'a, b, c (', Ina,', ', Inb,', ', Inc, ') are close to that of ', DBCollectionCode(DBE)
+                WRITE(6,'(A9, F7.3, A2, F7.3, A2, F7.3, A1)') 'a, b, c (', DBa(DBE),', ', DBb(DBE),', ', DBc(DBE),')'
+                WRITE(6,*)
+            END IF
+    
+            IF (SimilarityCount(DBE,4) == 1 .AND. SimilarityCount(DBE,5) == 1 .AND. SimilarityCount(DBE,6) == 1) THEN
+                WRITE(6,'(A20, F7.3, A2, F7.3, A2, F7.3, A23, A7)') 'alpha, beta, gamma (', InAlpha,', ', InBeta,', ', INGamma, ') are close to that of ', DBCollectionCode(DBE)
+                WRITE(6,'(A20, F7.3, A2, F7.3, A2, F7.3, A1)') 'alpha, beta, gamma (', DBAlpha(DBE),', ', DBBeta(DBE),', ', DBGamma(DBE),')'
+                WRITE(6,*)
+            END IF
+    
+            IF (SimilarityCount(DBE,7) == 1) THEN
+                WRITE(6,'(A8, F8.3, A22, A7)') 'Volume (', InVolume, ') is close to that of ', DBCollectionCode(DBE)
+                WRITE(6,'(A8, F8.3, A1)') 'Volume (', DBVolume(DBE),')'
+                WRITE(6,*)
+            END IF
+    
+    
+        END DO
+            
 ELSE
     WRITE(6,*) 
-    WRITE(6,*)  'No Similarities'
+    WRITE(6,*) 'No Similarities'
     WRITE(6,*) 
 END IF
-
-
-
-CLOSE(66)
 
 
 
@@ -241,19 +229,19 @@ END IF
 END FUNCTION RangeFall
 
 
-FUNCTION Replace_Text (s,text,rep)  RESULT(outs)
+FUNCTION Replace_Text (s,old,new)  RESULT(outs)
 
 !http://fortranwiki.org/fortran/show/String_Functions
 
-CHARACTER(*)        :: s,text,rep
+CHARACTER(*)        :: s,old,new
 CHARACTER(LEN(s)+100) :: outs     ! provide outs with extra 100 char len
-INTEGER             :: i, nt, nr
+INTEGER             :: i, lenold, lennew
 
-outs = s ; nt = LEN_TRIM(text) ; nr = LEN_TRIM(rep)
-DO
-   i = INDEX(outs,text(:nt)) 
-   IF (i == 0) EXIT
-   outs = outs(:i-1) // rep(:nr) // outs(i+nt:)
+outs = s ; lenold = LEN_TRIM(old) ; lennew = LEN_TRIM(new)
+DO WHILE(.TRUE.)
+   i = INDEX(outs,old(:lenold))  !gives item number for old text in string
+   IF (i == 0) EXIT !if string not found then leave loop
+   outs = outs(:i-1) // new(:lennew) // outs(i+lenold:) !concatenate new text inbetween pieces of old text
 END DO
 END FUNCTION Replace_Text
 
