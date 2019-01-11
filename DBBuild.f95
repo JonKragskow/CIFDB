@@ -4,7 +4,7 @@ CHARACTER(LEN=100) :: InputFile, Line, InSystematicName, Cdummy, INaChar, INbCha
 CHARACTER(LEN=250) :: BIGLINE
 CHARACTER(LEN = 10) :: YoN, RYoN, TolYoN, QuickFlag,InitialiseFlag,DCIFYoN
 CHARACTER(LEN = 100), ALLOCATABLE ::  DBCollectionCode(:), DBCollectionEntity(:), DBSystematicName(:), DBCollectionDate(:)
-INTEGER :: Nameflag,NDatabaseEntries, CollectionDateFlag, CollectionEntityFlag, DBE, SimilarityFlag, intdummy
+INTEGER :: Nameflag,NDatabaseEntries, CollectionDateFlag, CollectionEntityFlag, DBE, SimilarityFlag, intdummy, DataFound
 INTEGER, ALLOCATABLE :: SimilarityCount(:,:)
 REAL(KIND = 8) :: INa, INb, INc, INAlpha, INBeta, INGamma, INVolume, aTol, bTol, cTol, alphaTol, betaTol, gammaTol, VolTol, DefaultTol
 REAL(KIND = 8), ALLOCATABLE :: DBa(:), DBb(:), DBc(:), DBAlpha(:), DBBeta(:),DBGamma(:), DBVolume(:)
@@ -72,6 +72,7 @@ END IF
 NameFlag = 0
 CollectionDateFlag = 0
 CollectionEntityFlag = 0
+DataFound = 0
 
 !Open input CIF and read out data fields
 OPEN(33, FILE = InputFile, STATUS = 'OLD')
@@ -81,12 +82,16 @@ OPEN(33, FILE = InputFile, STATUS = 'OLD')
                 Line = ADJUSTL(Line)
                 !Collection code
                 IF(Line(1:5) == 'data_') THEN
-                    IF (LEN(ADJUSTL(TRIM(Line))) /= 5) THEN 
+                    IF (LEN(ADJUSTL(TRIM(Line))) /= 5 .AND. DataFound /= 1) THEN 
                         InCollectionCode = ADJUSTL(TRIM(Line(6:12)))
-                    ELSE
+                        DataFound = 1
+                    ELSE IF (LEN(ADJUSTL(TRIM(Line))) == 5) THEN
                         WRITE(6,*) 'No collection code found in CIF     ', InputFile
                         WRITE(6,*) 'DBBuild Aborts!'
                         STOP
+                    ELSE IF (DataFound == 1) THEN
+                        WRITE(6,*) 'More than one dataset in CIF, only including first dataset'
+                        GOTO 99
                     END IF
                 END IF
     
