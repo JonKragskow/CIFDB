@@ -49,7 +49,7 @@ WRITE(6,*)'                 /       CIFDB        \   '
 WRITE(6,*)'                /     DBBuild V2.0     \  '
 WRITE(6,*)'               /                        \ '
 WRITE(6,*)'               \  By Jon G. C. Kragskow / '
-WRITE(6,*)'                \                      /  '
+WRITE(6,*)'                \  kragskow.com/cifdb  /  '
 WRITE(6,*)'                 \                    /   '
 WRITE(6,*)'                  \                  /    '
 WRITE(6,*)'                   \                /     '
@@ -100,8 +100,14 @@ OPEN(33, FILE = InputFile, STATUS = 'OLD')
                     IF (LEN(ADJUSTL(TRIM(Line))) /= 25) THEN 
                         InSystematicName = Replace_Text(ADJUSTL(TRIM(Line(26:))),"'",'')
                         InSystematicName = strcompress(InSystematicName,intdummy)
-                        NameFlag = 1
-                    ELSE
+
+                        IF (InSystematicName == '?') THEN
+                            WRITE(6,*) 'Warning - No systematic name detected in CIF     ', InputFile
+                            IF (InitialiseFlag == 'y') WRITE(55,*) 'No systematic name detected for file --  ',InputFile
+                        ELSE 
+                            NameFlag = 1
+                        END IF
+                    ELSE 
                         WRITE(6,*) 'Warning - No systematic name detected in CIF     ', InputFile
                         IF (InitialiseFlag == 'y') WRITE(55,*) 'No systematic name detected for file --  ',InputFile
                     END IF
@@ -171,7 +177,7 @@ IF (InitialiseFlag == 'y') CLOSE(55) !Close error file
 
 !Error reporting in Database File
 IF (CollectionDateFlag == 0) InCollectionDate = 'UNKNOWN'
-IF (Nameflag == 0) InSystematicName = '*****************************MISSING*********************************'
+IF (Nameflag == 0) InSystematicName = '***MISSING***'
 IF (CollectionEntityFlag == 0) InCollectionEntity = '???????'
 
 
@@ -296,11 +302,7 @@ OPEN(66, FILE = DatabaseFile, STATUS = 'OLD')
     !Add on Similarities
     DO DBE = 1, NDatabaseEntries
 
-        IF (SimilarityCount(DBE,1) == 1 .AND. SimilarityCount(DBE,2) == 1 .AND. SimilarityCount(DBE,3) == 1 ) SimilarityFlag = 1
-
-        IF (SimilarityCount(DBE,4) == 1 .AND. SimilarityCount(DBE,5) == 1 .AND. SimilarityCount(DBE,6) == 1) SimilarityFlag = 1
-
-        IF (SimilarityCount(DBE,7) == 1) SimilarityFlag = 1
+        IF (SimilarityCount(DBE,1) == 1 .AND. SimilarityCount(DBE,2) == 1 .AND. SimilarityCount(DBE,3) == 1 .AND. SimilarityCount(DBE,4) == 1 .AND. SimilarityCount(DBE,5) == 1 .AND. SimilarityCount(DBE,6) == 1 .AND. SimilarityCount(DBE,7) == 1) SimilarityFlag = 1
 
     END DO
     
@@ -310,27 +312,14 @@ OPEN(66, FILE = DatabaseFile, STATUS = 'OLD')
             WRITE(6,*) 'Similarities:' 
             WRITE(6,*) 
             
-                DO DBE = 1, NDatabaseEntries
-                    IF (SimilarityCount(DBE,1) == 1 .AND. SimilarityCount(DBE,2) == 1 .AND. SimilarityCount(DBE,3) == 1) THEN
-                        WRITE(6,'(A9, F7.3, A2, F7.3, A2, F7.3, A23, A7)') 'a, b, c (', Ina,', ', Inb,', ', Inc, ') are close to that of ', DBCollectionCode(DBE)
-                        WRITE(6,'(A9, F7.3, A2, F7.3, A2, F7.3, A1)') 'a, b, c (', DBa(DBE),', ', DBb(DBE),', ', DBc(DBE),')'
-                        WRITE(6,*)
-                    END IF
-            
-                    IF (SimilarityCount(DBE,4) == 1 .AND. SimilarityCount(DBE,5) == 1 .AND. SimilarityCount(DBE,6) == 1) THEN
-                        WRITE(6,'(A20, F7.3, A2, F7.3, A2, F7.3, A23, A7)') 'alpha, beta, gamma (', InAlpha,', ', InBeta,', ', INGamma, ') are close to that of ', DBCollectionCode(DBE)
-                        WRITE(6,'(A20, F7.3, A2, F7.3, A2, F7.3, A1)') 'alpha, beta, gamma (', DBAlpha(DBE),', ', DBBeta(DBE),', ', DBGamma(DBE),')'
-                        WRITE(6,*)
-                    END IF
-            
-                    IF (SimilarityCount(DBE,7) == 1) THEN
-                        WRITE(6,'(A8, F8.3, A22, A7)') 'Volume (', InVolume, ') is close to that of ', DBCollectionCode(DBE)
-                        WRITE(6,'(A8, F8.3, A1)') 'Volume (', DBVolume(DBE),')'
-                        WRITE(6,*)
-                    END IF
-            
-            
-                END DO
+            DO DBE = 1, NDatabaseEntries
+            IF (SimilarityCount(DBE,1) == 1 .AND. SimilarityCount(DBE,2) == 1 .AND. SimilarityCount(DBE,3) == 1 .AND. SimilarityCount(DBE,4) == 1 .AND. SimilarityCount(DBE,5) == 1 .AND. SimilarityCount(DBE,6) == 1 .AND. SimilarityCount(DBE,7) == 1) THEN
+                WRITE(6,'(A9, F7.3, A2, F7.3, A2, F7.3, A2, F7.3, A2, F7.3, A2, F7.3, A2, F8.3, A23, A7)') 'a, b, c, alpha, beta, gamma, volume (', Ina,', ', Inb,', ', Inc, InAlpha,', ', InBeta,', ', INGamma, InVolume, ') are close to that of ', DBCollectionCode(DBE)
+                WRITE(6,'(A9, F7.3, A2, F7.3, A2, F7.3, A2, F7.3, A2, F7.3, A2, F7.3, A2, F8.3, A1)') 'a, b, c, alpha, beta, gamma, volume (', DBa(DBE),', ', DBb(DBE),', ', DBc(DBE), DBAlpha(DBE),', ', DBBeta(DBE),', ', DBGamma(DBE), DBVolume(DBE),')'
+                WRITE(6,*)
+            END IF
+   
+        END DO
                     
         ELSE
             WRITE(6,*) 

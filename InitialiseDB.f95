@@ -21,6 +21,34 @@ OPEN(66, FILE = 'CIFDATABASE.txt', STATUS = 'UNKNOWN')
 CLOSE(66)
 
 
+WRITE(6,*)'                           /\             '
+WRITE(6,*)'                          /  \            '
+WRITE(6,*)'                         /    \           '
+WRITE(6,*)'                        /      \          '
+WRITE(6,*)'                       /        \         '
+WRITE(6,*)'                      /          \        '
+WRITE(6,*)'                     /            \       '
+WRITE(6,*)'                    /              \      '
+WRITE(6,*)'                   /                \     '
+WRITE(6,*)'                  /                  \    '
+WRITE(6,*)'                 /       CIFDB        \   '
+WRITE(6,*)'                /     DBBuild V2.0     \  '
+WRITE(6,*)'               /                        \ '
+WRITE(6,*)'               \  By Jon G. C. Kragskow / '
+WRITE(6,*)'                \  kragskow.com/cifdb  /  '
+WRITE(6,*)'                 \                    /   '
+WRITE(6,*)'                  \                  /    '
+WRITE(6,*)'                   \                /     '
+WRITE(6,*)'                    \              /      '
+WRITE(6,*)'                     \            /       '
+WRITE(6,*)'                      \          /        '
+WRITE(6,*)'                       \        /         '
+WRITE(6,*)'                        \      /          '
+WRITE(6,*)'                         \    /           '
+WRITE(6,*)'                          \  /            '
+WRITE(6,*)'                           \/             '
+
+
 OPEN(55, FILE = 'DBERRORS.txt', STATUS = 'UNKNOWN')
 CLOSE(55)
 OPEN(33, FILE = TRIM(ADJUSTL(CIFListFile)),STATUS = 'OLD')
@@ -28,8 +56,8 @@ OPEN(33, FILE = TRIM(ADJUSTL(CIFListFile)),STATUS = 'OLD')
 
     DO J = 1,NCIFs
         READ(33,'(A)') CIFList(J) 
-            !CALL SYSTEM('DBBuild '//trim(adjustl(CIFList(J)))//' CIFDATABASE.txt y y')!DOS`
-            CALL SYSTEM('./DBBuild '//trim(adjustl(CIFList(J)))//' CIFDATABASE.txt y y')!Unix
+            CALL SYSTEM('DBBuild '//trim(adjustl(CIFList(J)))//' CIFDATABASE.txt y y')!DOS
+            !CALL SYSTEM('./DBBuild '//trim(adjustl(CIFList(J)))//' CIFDATABASE.txt y y')!Unix
             !WRITE(6,*) './DBBuild '//trim(adjustl(CIFList(J)))//' CIFDATABASE.txt y y'!debug
     END DO
 

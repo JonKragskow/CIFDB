@@ -52,7 +52,7 @@ WRITE(6,*)'                 /       CIFDB        \   '
 WRITE(6,*)'                /     DBCheck V2.0     \  '
 WRITE(6,*)'               /                        \ '
 WRITE(6,*)'               \  By Jon G. C. Kragskow / '
-WRITE(6,*)'                \                      /  '
+WRITE(6,*)'                \  kragskow.com/cifdb  /  '
 WRITE(6,*)'                 \                    /   '
 WRITE(6,*)'                  \                  /    '
 WRITE(6,*)'                   \                /     '
@@ -164,11 +164,7 @@ END DO
 !Add on Similarities
 DO DBE = 1, NDatabaseEntries
     
-    IF (SimilarityCount(DBE,1) == 1 .AND. SimilarityCount(DBE,2) == 1 .AND. SimilarityCount(DBE,3) == 1 ) SimilarityFlag = 1
-
-    IF (SimilarityCount(DBE,4) == 1 .AND. SimilarityCount(DBE,5) == 1 .AND. SimilarityCount(DBE,6) == 1) SimilarityFlag = 1
-
-    IF (SimilarityCount(DBE,7) == 1) SimilarityFlag = 1
+    IF (SimilarityCount(DBE,1) == 1 .AND. SimilarityCount(DBE,2) == 1 .AND. SimilarityCount(DBE,3) == 1 .AND. SimilarityCount(DBE,4) == 1 .AND. SimilarityCount(DBE,5) == 1 .AND. SimilarityCount(DBE,6) == 1 .AND. SimilarityCount(DBE,7) == 1) SimilarityFlag = 1
 
 END DO
 
@@ -179,25 +175,12 @@ IF (SimilarityFlag > 0) THEN
     WRITE(6,*) 
     
         DO DBE = 1, NDatabaseEntries
-            IF (SimilarityCount(DBE,1) == 1 .AND. SimilarityCount(DBE,2) == 1 .AND. SimilarityCount(DBE,3) == 1) THEN
-                WRITE(6,'(A9, F7.3, A2, F7.3, A2, F7.3, A23, A7)') 'a, b, c (', Ina,', ', Inb,', ', Inc, ') are close to that of ', DBCollectionCode(DBE)
-                WRITE(6,'(A9, F7.3, A2, F7.3, A2, F7.3, A1)') 'a, b, c (', DBa(DBE),', ', DBb(DBE),', ', DBc(DBE),')'
+            IF (SimilarityCount(DBE,1) == 1 .AND. SimilarityCount(DBE,2) == 1 .AND. SimilarityCount(DBE,3) == 1 .AND. SimilarityCount(DBE,4) == 1 .AND. SimilarityCount(DBE,5) == 1 .AND. SimilarityCount(DBE,6) == 1 .AND. SimilarityCount(DBE,7) == 1) THEN
+                WRITE(6,'(A9, F7.3, A2, F7.3, A2, F7.3, A2, F7.3, A2, F7.3, A2, F7.3, A2, F8.3, A23, A7)') 'a, b, c, alpha, beta, gamma, volume (', Ina,', ', Inb,', ', Inc, InAlpha,', ', InBeta,', ', INGamma, InVolume, ') are close to that of ', DBCollectionCode(DBE)
+                WRITE(6,'(A9, F7.3, A2, F7.3, A2, F7.3, A2, F7.3, A2, F7.3, A2, F7.3, A2, F8.3, A1)') 'a, b, c, alpha, beta, gamma, volume (', DBa(DBE),', ', DBb(DBE),', ', DBc(DBE), DBAlpha(DBE),', ', DBBeta(DBE),', ', DBGamma(DBE), DBVolume(DBE),')'
                 WRITE(6,*)
             END IF
-    
-            IF (SimilarityCount(DBE,4) == 1 .AND. SimilarityCount(DBE,5) == 1 .AND. SimilarityCount(DBE,6) == 1) THEN
-                WRITE(6,'(A20, F7.3, A2, F7.3, A2, F7.3, A23, A7)') 'alpha, beta, gamma (', InAlpha,', ', InBeta,', ', INGamma, ') are close to that of ', DBCollectionCode(DBE)
-                WRITE(6,'(A20, F7.3, A2, F7.3, A2, F7.3, A1)') 'alpha, beta, gamma (', DBAlpha(DBE),', ', DBBeta(DBE),', ', DBGamma(DBE),')'
-                WRITE(6,*)
-            END IF
-    
-            IF (SimilarityCount(DBE,7) == 1) THEN
-                WRITE(6,'(A8, F8.3, A22, A7)') 'Volume (', InVolume, ') is close to that of ', DBCollectionCode(DBE)
-                WRITE(6,'(A8, F8.3, A1)') 'Volume (', DBVolume(DBE),')'
-                WRITE(6,*)
-            END IF
-    
-    
+   
         END DO
             
 ELSE
