@@ -10,3 +10,7 @@ A set of programs designed to create a database of CIF cell parameters in the fo
 .linux files are for linux (REMOVE .linux BEFORE USING!)
 
 .mac files are for mac (REMOVE .mac BEFORE USING!)
+
+Windows users please install minGW https://gcc.gnu.org/wiki/GFortranBinaries
+
+Mac/Linux users please install gfortran/gcc via your package manager (apt, aptitude, homebrew). 
