@@ -46,23 +46,16 @@ IF (NDatabaseEntries > 0) THEN
 
     CALL ReadDatabase(NDatabaseEntries, DBCollectionCode, DBCollectionDate, DBCollectionEntity, DBSystematicName, DBa, DBb, DBc, DBAlpha, DBBeta, DBGamma, DBVolume)
 
-    CALL SetTolerances(quickflag, DefaultTol, aTol, bTol, cTol, alphaTol, betaTol, gammaTol, VolTol)
+    CALL SetTolerances(QuickFlag, DefaultTol, aTol, bTol, cTol, alphaTol, betaTol, gammaTol, VolTol)
+
+    CALL CheckAndWrite(QuickFlag, NDatabaseEntries, INa, INb, INc, InAlpha, InBeta, InGamma, InVolume, aTol, bTol, cTol, alphaTol, betaTol, gammaTol, VolTol, DBa, DBb, DBc, DBAlpha, DBbeta, DBGamma, DBVolume)
+
+ELSE
+
+CALL PrintFirstEntry(INa, INb, INc, InAlpha, InBeta, InGamma, InVolume)
 
 END IF
-    
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Find similar structures !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Write out final database file !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!   
 
-CALL CheckAndWrite(QuickFlag, NDatabaseEntries, INa, INb, INc, InAlpha, InBeta, InGamma, InVolume, aTol, bTol, cTol, alphaTol, betaTol, gammaTol, VolTol, DBa, DBb, DBc, DBAlpha, DBbeta, DBGamma, DBVolume)
-
-!************************************************************************************************************************!
-!************************************************************************************************************************!
-!************************************************************************************************************************!
-!************************************************************************************************************************!
-!************************************************************************************************************************!
-!************************************************************************************************************************!
 
 
 CONTAINS
@@ -100,7 +93,7 @@ END SUBROUTINE SelfPromo
 
 SUBROUTINE ReadCIF(InputFile, InitialiseFlag, InCollectionCode, InSystematicName, InCollectionDate, InCollectionEntity, INa, Inb, Inc, InAlpha, InBeta, InGamma, InVolume)
 IMPLICIT NONE
-INTEGER :: Nameflag, CollectionDateFlag, CollectionEntityFlag, DataFound, intdummy
+INTEGER ::  DataFound, intdummy
 CHARACTER(LEN = 10) :: InitialiseFlag
 CHARACTER(LEN=100) :: InputFile, Line, InSystematicName, INaChar, INbChar, INcChar, INAlphaChar, INBetaChar, INGammaChar, INVolumeChar, InCollectionDate, InCollectionEntity, InCollectionCode, Cdummy
 REAL(KIND = 8) :: INa, INb, INc, INAlpha, INBeta, INGamma, INVolume
@@ -113,10 +106,13 @@ ELSE
 END IF
 
 
-!Set tracking flags for whether some fields are present or not
-NameFlag = 0
-CollectionDateFlag = 0
-CollectionEntityFlag = 0
+!Set Default Values
+InCollectionDate = 'UNKNOWN'
+InSystematicName = 'UNKNOWN'
+InCollectionEntity = 'UNKNOWN'
+
+
+!Set tracking flag for whether data found or not
 DataFound = 0
 
 !Open input CIF and read out data fields
@@ -148,10 +144,9 @@ OPEN(33, FILE = InputFile, STATUS = 'OLD')
                 InSystematicName = strcompress(InSystematicName,intdummy)
 
                 IF (InSystematicName == '?') THEN
+                    InSystematicName = 'UNKNOWN'
                     WRITE(6,*) 'Warning - No systematic name detected in CIF     ', InputFile
                     IF (InitialiseFlag == 'y') WRITE(55,*) 'No systematic name detected for file --  ',InputFile
-                ELSE 
-                    NameFlag = 1
                 END IF
             ELSE 
                 WRITE(6,*) 'Warning - No systematic name detected in CIF     ', InputFile
@@ -162,7 +157,6 @@ OPEN(33, FILE = InputFile, STATUS = 'OLD')
         !Collection Date
         IF(Line(1:30) == '_manchester_internal_coll_date') THEN
             IF (LEN(ADJUSTL(TRIM(Line))) /= 30) THEN 
-                CollectionDateFlag = 1
                 InCollectionDate = ADJUSTL(TRIM(Line(31:)))
                 InCollectionDate = Replace_Text(InCollectionDate,'/','_')
             ELSE
@@ -174,7 +168,6 @@ OPEN(33, FILE = InputFile, STATUS = 'OLD')
         !InCollection Client
         IF(Line(1:32) == '_manchester_internal_coll_client') THEN
             IF (LEN(ADJUSTL(TRIM(Line))) /= 32) THEN 
-                CollectionEntityFlag = 1
                 InCollectionEntity = ADJUSTL(TRIM(Line(33:)))
                 InCollectionEntity = Replace_Text(InCollectionEntity,'/','-')
             ELSE
@@ -222,10 +215,7 @@ CLOSE(33)
 
 IF (InitialiseFlag == 'y') CLOSE(55) !Close error file
 
-!Error reporting in Database File
-IF (CollectionDateFlag == 0) InCollectionDate = 'UNKNOWN'
-IF (Nameflag == 0) InSystematicName = '***MISSING***'
-IF (CollectionEntityFlag == 0) InCollectionEntity = '???????'
+
 
 
 END SUBROUTINE ReadCIF
@@ -399,6 +389,7 @@ REAL(KIND = 8) :: INa, INb, INc, InAlpha, InBeta, InGamma, InVolume
 REAL(KIND = 8) :: DBa(:), DBb(:), DBc(:), DBAlpha(:), DBBeta(:), DBGamma(:), DBVolume(:)
 CHARACTER(LEN = 5) :: QuickFlag, YoN, RYoN
 
+YoN = 'y'; RYoN = 'y'
 
 IF ( quickflag /= 'y') THEN
     WRITE(6,*) 'Would you like to add this entry to the Database? (y/n)'
@@ -419,14 +410,8 @@ IF ( quickflag /= 'y') THEN
             WRITE(6,*) 'Are you sure you want this entry (y/n)'
             READ(5,*) RYoN
         END DO
-    END IF
-
-ELSE
-
-    YoN = 'y'; RYoN = 'y'
-
+    END IF   
 END IF
-
 
     
 IF (YoN == 'y' .AND. RYoN == 'y') THEN
@@ -442,7 +427,8 @@ IF (YoN == 'y' .AND. RYoN == 'y') THEN
             WRITE(66,'(A7, A3, A10, A3, A15, A3, A100, A3, F7.3, A3, F7.3, A3, F7.3, A3, F7.3, A3, F7.3, A3, F7.3, A3, F9.3)') ADJUSTL(TRIM(DBCollectionCode(DBE))), '   ' , ADJUSTL(TRIM(DBCollectionDate(DBE))), '   ', ADJUSTL(TRIM(DBCollectionEntity(DBE))), '   ', ADJUSTL(TRIM(DBSystematicName(DBE))), '   ', DBa(DBE), '  ', DBb(DBE), '   ', DBc(DBE), '   ', DBalpha(DBE), '   ', DBbeta(DBE), '   ', DBGamma(DBE), '   ', DBVolume(DBE)
     END DO
 
-    !Write extra entry to database
+
+    !Write new entry to database
     WRITE(66,'(A7, A3, A10, A3, A15, A3, A100, A3, F7.3, A3, F7.3, A3, F7.3, A3, F7.3, A3, F7.3, A3, F7.3, A3, F9.3)') ADJUSTL(TRIM(InCollectionCode)), '   ' , ADJUSTL(TRIM(InCollectionDate)), '   ', ADJUSTL(TRIM(InCollectionEntity)), '   ', ADJUSTL(TRIM(InSystematicName)), '   ', Ina, '   ', Inb, '   ', Inc, '   ', Inalpha, '   ', Inbeta, '   ', InGamma, '   ', InVolume
 
     CLOSE(66)
@@ -450,6 +436,23 @@ IF (YoN == 'y' .AND. RYoN == 'y') THEN
 END IF
 
 END SUBROUTINE PrintDB
+
+SUBROUTINE PrintFirstEntry(INa, INb, INc, InAlpha, InBeta, InGamma, InVolume)
+IMPLICIT NONE
+REAL(KIND = 8) :: INa, INb, INc, InAlpha, InBeta, InGamma, InVolume
+
+OPEN(66, FILE = DatabaseFile, STATUS = 'OLD')
+WRITE(66,'(I0)') 1
+WRITE(66,*)
+WRITE(66,*) '| CODE |     COLL. DATE    |   PERSON   |                                                 FORMULA                                            |    a    |    b    |    c    |  alpha  |   beta   |  gamma  |  Volume  |'
+WRITE(66,*)
+
+!Write first entry to database
+WRITE(66,'(A7, A3, A10, A3, A15, A3, A100, A3, F7.3, A3, F7.3, A3, F7.3, A3, F7.3, A3, F7.3, A3, F7.3, A3, F9.3)') ADJUSTL(TRIM(InCollectionCode)), '   ' , ADJUSTL(TRIM(InCollectionDate)), '   ', ADJUSTL(TRIM(InCollectionEntity)), '   ', ADJUSTL(TRIM(InSystematicName)), '   ', Ina, '   ', Inb, '   ', Inc, '   ', Inalpha, '   ', Inbeta, '   ', InGamma, '   ', InVolume
+
+CLOSE(66)
+
+END SUBROUTINE PrintFirstEntry
 
 
 FUNCTION Replace_Text (s,old,new)  RESULT(outs)
