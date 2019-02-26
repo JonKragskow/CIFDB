@@ -4,7 +4,7 @@ CHARACTER(LEN=100) :: InputFile, InSystematicName, DatabaseFile, InCollectionDat
 CHARACTER(LEN = 10) :: QuickFlag, InitialiseFlag
 CHARACTER(LEN = 100), ALLOCATABLE ::  DBCollectionCode(:), DBCollectionEntity(:), DBSystematicName(:), DBCollectionDate(:)
 INTEGER :: NDatabaseEntries
-REAL(KIND = 8) :: INa, INb, INc, INAlpha, INBeta, INGamma, INVolume, aTol, bTol, cTol, alphaTol, betaTol, gammaTol, VolTol, DefaultTol
+REAL(KIND = 8) :: INa, INb, INc, INAlpha, INBeta, INGamma, INVolume, aTol, bTol, cTol, alphaTol, betaTol, gammaTol, VolTol
 REAL(KIND = 8), ALLOCATABLE :: DBa(:), DBb(:), DBc(:), DBAlpha(:), DBBeta(:),DBGamma(:), DBVolume(:)
 
 call GET_COMMAND_ARGUMENT(1,InputFile)
@@ -44,9 +44,9 @@ IF (NDatabaseEntries > 0) THEN
 
     ALLOCATE(DBCollectionCode(NDatabaseEntries), DBCollectionDate(NDatabaseEntries), DBCollectionEntity(NDatabaseEntries), DBSystematicName(NDatabaseEntries), DBa(NDatabaseEntries), DBb(NDatabaseEntries), DBc(NDatabaseEntries), DBAlpha(NDatabaseEntries), DBBeta(NDatabaseEntries), DBGamma(NDatabaseEntries), DBVolume(NDatabaseEntries))
 
-    CALL ReadDatabase(NDatabaseEntries, DBCollectionCode, DBCollectionDate, DBCollectionEntity, DBSystematicName, DBa, DBb, DBc, DBAlpha, DBBeta, DBGamma, DBVolume)
+    CALL ReadDatabase(DatabaseFile, NDatabaseEntries, DBCollectionCode, DBCollectionDate, DBCollectionEntity, DBSystematicName, DBa, DBb, DBc, DBAlpha, DBBeta, DBGamma, DBVolume)
 
-    CALL SetTolerances(QuickFlag, DefaultTol, aTol, bTol, cTol, alphaTol, betaTol, gammaTol, VolTol)
+    CALL SetTolerances(QuickFlag, aTol, bTol, cTol, alphaTol, betaTol, gammaTol, VolTol)
 
     CALL CheckAndWrite(QuickFlag, NDatabaseEntries, INa, INb, INc, InAlpha, InBeta, InGamma, InVolume, aTol, bTol, cTol, alphaTol, betaTol, gammaTol, VolTol, DBa, DBb, DBc, DBAlpha, DBbeta, DBGamma, DBVolume)
 
@@ -232,10 +232,10 @@ CLOSE(66)
 
 END SUBROUTINE ReadNEntries
 
-SUBROUTINE ReadDatabase(NDatabaseEntries, DBCollectionCode, DBCollectionDate, DBCollectionEntity, DBSystematicName, DBa, DBb, DBc, DBAlpha, DBBeta, DBGamma, DBVolume)
+SUBROUTINE ReadDatabase(DatabaseFile, NDatabaseEntries, DBCollectionCode, DBCollectionDate, DBCollectionEntity, DBSystematicName, DBa, DBb, DBc, DBAlpha, DBBeta, DBGamma, DBVolume)
 IMPLICIT NONE
 CHARACTER(LEN = 250) :: BIGLINE
-CHARACTER(LEN = 100) :: DBCollectionCode(:), DBCollectionEntity(:), DBSystematicName(:), DBCollectionDate(:), YoN
+CHARACTER(LEN = 100) :: DatabaseFile, DBCollectionCode(:), DBCollectionEntity(:), DBSystematicName(:), DBCollectionDate(:), YoN
 REAL(KIND = 8) ::DBa(:), DBb(:), DBc(:), DBAlpha(:), DBBeta(:), DBGamma(:), DBVolume(:)
 INTEGER :: DBE, NDatabaseEntries
 
@@ -276,10 +276,21 @@ CLOSE(66)
 
 END SUBROUTINE ReadDatabase
 
-SUBROUTINE SetTolerances(QuickFlag, DefaultTol, aTol, bTol, cTol, alphaTol, betaTol, gammaTol, VolTol)
+SUBROUTINE SetTolerances(QuickFlag, aTol, bTol, cTol, alphaTol, betaTol, gammaTol, VolTol)
 IMPLICIT NONE
 CHARACTER(LEN = 5) :: YoN, QuickFlag
 REAL(KIND = 8) :: DefaultTol, aTol, bTol, cTol, alphaTol, betaTol, gammaTol, VolTol
+
+DefaultTol = 5.0_8
+
+aTol = DefaultTol
+bTol = DefaultTol
+cTol = DefaultTol
+alphaTol = DefaultTol
+betaTol = DefaultTol
+gammaTol = DefaultTol
+VolTol = DefaultTol
+
 
 !Allow user to set different tolerance or use global tolerance
 IF (QuickFlag /= 'y') THEN
@@ -308,14 +319,6 @@ IF (QuickFlag /= 'y') THEN
         gammaTol = gammaTol/100.0_8
         VolTol = VolTol/100.0_8
     END IF
-ELSE 
-    aTol = DefaultTol
-    bTol = DefaultTol
-    cTol = DefaultTol
-    alphaTol = DefaultTol
-    betaTol = DefaultTol
-    gammaTol = DefaultTol
-    VolTol = DefaultTol
 END IF
 
 END SUBROUTINE SetTolerances
@@ -363,8 +366,8 @@ IF ( quickflag /= 'y') THEN
         
         DO DBE = 1, NDatabaseEntries
         IF (SimilarityCount(DBE,1) == 1 .AND. SimilarityCount(DBE,2) == 1 .AND. SimilarityCount(DBE,3) == 1 .AND. SimilarityCount(DBE,4) == 1 .AND. SimilarityCount(DBE,5) == 1 .AND. SimilarityCount(DBE,6) == 1 .AND. SimilarityCount(DBE,7) == 1) THEN
-            WRITE(6,'(A9, F7.3, A2, F7.3, A2, F7.3, A2, F7.3, A2, F7.3, A2, F7.3, A2, F8.3, A23, A7)') 'a, b, c, alpha, beta, gamma, volume (', Ina,', ', Inb,', ', Inc, InAlpha,', ', InBeta,', ', INGamma, InVolume, ') are close to that of ', DBCollectionCode(DBE)
-            WRITE(6,'(A9, F7.3, A2, F7.3, A2, F7.3, A2, F7.3, A2, F7.3, A2, F7.3, A2, F8.3, A1)') 'a, b, c, alpha, beta, gamma, volume (', DBa(DBE),', ', DBb(DBE),', ', DBc(DBE), DBAlpha(DBE),', ', DBBeta(DBE),', ', DBGamma(DBE), DBVolume(DBE),')'
+            WRITE(6,'(A, F7.3, A, F7.3, A, F7.3, A, F7.3, A, F7.3, A, F7.3, A, F8.3, A, A)') 'a, b, c, alpha, beta, gamma, volume (', Ina,', ', Inb,', ', Inc,', ', InAlpha,', ', InBeta,', ', INGamma,', ', InVolume, ') are close to that of ', ADJUSTL(TRIM(DBCollectionCode(DBE)))
+            WRITE(6,'(A, F7.3, A, F7.3, A, F7.3, A, F7.3, A, F7.3, A, F7.3, A, F8.3, A)') 'a, b, c, alpha, beta, gamma, volume (', DBa(DBE),', ', DBb(DBE),', ', DBc(DBE),', ', DBAlpha(DBE),', ', DBBeta(DBE),', ', DBGamma(DBE),', ', DBVolume(DBE),')'
             WRITE(6,*)
         END IF
 

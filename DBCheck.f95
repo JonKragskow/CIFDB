@@ -1,12 +1,9 @@
 PROGRAM CIFDBCheck
 IMPLICIT NONE
 CHARACTER(LEN=100) :: INaChar, INbChar, INcChar, INAlphaChar, INBetaChar, INGammaChar, INVolumeChar,DatabaseFile !InCollectionDay, InCollectionMonth, InCollectionYear
-CHARACTER(LEN=250) :: BIGLINE
-CHARACTER(LEN = 10) :: TolYoN
 CHARACTER(LEN = 100), ALLOCATABLE ::  DBCollectionCode(:), DBCollectionDate(:), DBCollectionEntity(:), DBSystematicName(:)
-INTEGER :: NDatabaseEntries, DBE, SimilarityFlag
-INTEGER, ALLOCATABLE :: SimilarityCount(:,:)
-REAL(KIND = 8) :: INa, INb, INc, INAlpha, INBeta, INGamma, INVolume, aTol, bTol, cTol, alphaTol, betaTol, gammaTol, VolTol, DefaultTol
+INTEGER :: NDatabaseEntries
+REAL(KIND = 8) :: INa, INb, INc, INAlpha, INBeta, INGamma, INVolume, aTol, bTol, cTol, alphaTol, betaTol, gammaTol, VolTol
 REAL(KIND = 8), ALLOCATABLE :: DBa(:), DBb(:), DBc(:), DBAlpha(:), DBBeta(:),DBGamma(:), DBVolume(:)
 
 call GET_COMMAND_ARGUMENT(1,DatabaseFile)
@@ -35,8 +32,21 @@ READ(INGammaChar,*) InGamma
 READ(INVolumeChar,*) InVolume
 
 
+CALL SelfPromo
 
-!!!!!!! Write some gubbins
+CALL ReadNEntries(DatabaseFile, NDatabaseEntries)
+
+ALLOCATE(DBCollectionCode(NDatabaseEntries), DBCollectionDate(NDatabaseEntries), DBCollectionEntity(NDatabaseEntries), DBSystematicName(NDatabaseEntries), DBa(NDatabaseEntries), DBb(NDatabaseEntries), DBc(NDatabaseEntries), DBAlpha(NDatabaseEntries), DBBeta(NDatabaseEntries), DBGamma(NDatabaseEntries), DBVolume(NDatabaseEntries))
+
+CALL ReadDatabase(DatabaseFile, NDatabaseEntries, DBCollectionCode, DBCollectionDate, DBCollectionEntity, DBSystematicName, DBa, DBb, DBc, DBAlpha, DBBeta, DBGamma, DBVolume)
+
+CALL SetTolerances(aTol, bTol, cTol, alphaTol, betaTol, gammaTol, VolTol)
+
+CALL CheckAndWrite( NDatabaseEntries, INa, INb, INc, InAlpha, InBeta, InGamma, InVolume, aTol, bTol, cTol, alphaTol, betaTol, gammaTol, VolTol, DBa, DBb, DBc, DBAlpha, DBbeta, DBGamma, DBVolume)
+
+CONTAINS
+
+SUBROUTINE SelfPromo
 
 WRITE(6,*)'                           /\             '
 WRITE(6,*)'                          /  \            '
@@ -49,7 +59,7 @@ WRITE(6,*)'                    /              \      '
 WRITE(6,*)'                   /                \     '
 WRITE(6,*)'                  /                  \    '
 WRITE(6,*)'                 /       CIFDB        \   '
-WRITE(6,*)'                /     DBCheck V2.0     \  '
+WRITE(6,*)'                /     DBBuild V2.0     \  '
 WRITE(6,*)'               /                        \ '
 WRITE(6,*)'               \  By Jon G. C. Kragskow / '
 WRITE(6,*)'                \  kragskow.com/cifdb  /  '
@@ -65,50 +75,77 @@ WRITE(6,*)'                         \    /           '
 WRITE(6,*)'                          \  /            '
 WRITE(6,*)'                           \/             '
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Read in database file !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+END SUBROUTINE SelfPromo
+
+SUBROUTINE ReadNEntries(DatabaseFile, NDatabaseEntries)
+IMPLICIT NONE
+INTEGER :: NDatabaseEntries
+CHARACTER(LEN = 100) :: DatabaseFile
+
+
+OPEN(66, FILE = DatabaseFile, STATUS = 'OLD')
+    READ(66,*) NDatabaseEntries
+CLOSE(66)
+
+END SUBROUTINE ReadNEntries
+
+SUBROUTINE ReadDatabase(DatabaseFile, NDatabaseEntries, DBCollectionCode, DBCollectionDate, DBCollectionEntity, DBSystematicName, DBa, DBb, DBc, DBAlpha, DBBeta, DBGamma, DBVolume)
+IMPLICIT NONE
+CHARACTER(LEN = 250) :: BIGLINE
+CHARACTER(LEN = 100) :: DatabaseFile, DBCollectionCode(:), DBCollectionEntity(:), DBSystematicName(:), DBCollectionDate(:)
+REAL(KIND = 8) ::DBa(:), DBb(:), DBc(:), DBAlpha(:), DBBeta(:), DBGamma(:), DBVolume(:)
+INTEGER :: DBE, NDatabaseEntries
 
 OPEN(66, FILE = DatabaseFile, STATUS = 'OLD')
 
-!Read Number of Database Entries
-    READ(66,*) NDatabaseEntries
-    READ(66,*) !READ BLANK
-    READ(66,*) !READ BLANK
-    READ(66,*) !READ BLANK
-    ALLOCATE(DBCollectionCode(NDatabaseEntries), DBCollectionDate(NDatabaseEntries), DBCollectionEntity(NDatabaseEntries), DBSystematicName(NDatabaseEntries), DBa(NDatabaseEntries), DBb(NDatabaseEntries), DBc(NDatabaseEntries), DBAlpha(NDatabaseEntries), DBBeta(NDatabaseEntries), DBGamma(NDatabaseEntries), DBVolume(NDatabaseEntries))
+    READ(66,*) NDatabaseEntries  !Read Number of Database Entries
+        READ(66,*) !READ BLANK
+        READ(66,*) !READ BLANK
+        READ(66,*) !READ BLANK
 
-!Loop over number of entries and read information
-    DO DBE = 1,NDatabaseEntries
-
-        READ(66,'(A)') BIGLINE
-        BIGLINE = Replace_Text(BIGLINE,',','~~')
-        READ(BIGLINE,*) DBCollectionCode(DBE), DBCollectionDate(DBE),  DBCollectionEntity(DBE), DBSystematicName(DBE), DBa(DBE), DBb(DBE), DBc(DBE), DBAlpha(DBE), DBBeta(DBE), DBGamma(DBE), DBVolume(DBE)
-        DBSystematicName(DBE) = ADJUSTL(TRIM(Replace_Text(DBSystematicName(DBE),'~~',',')))     
+    
+    !Loop over number of entries and read information
+    !Hacky way of reading in names with commas out of the databse file
+        DO DBE = 1,NDatabaseEntries
+            READ(66,'(A)') BIGLINE
+            BIGLINE = Replace_Text(BIGLINE,',','~~') !Replace commas with ~~
+            READ(BIGLINE,*) DBCollectionCode(DBE), DBCollectionDate(DBE),  DBCollectionEntity(DBE), DBSystematicName(DBE), DBa(DBE), DBb(DBE), DBc(DBE), DBAlpha(DBE), DBBeta(DBE), DBGamma(DBE), DBVolume(DBE)
+            DBSystematicName(DBE) = ADJUSTL(TRIM(Replace_Text(DBSystematicName(DBE),'~~',','))) !Replace ~~ with commas
+    
     END DO
 CLOSE(66)
 
+END SUBROUTINE ReadDatabase
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Set Tolerances for params !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-DefaultTol = 0.05_8
+SUBROUTINE SetTolerances(aTol, bTol, cTol, alphaTol, betaTol, gammaTol, VolTol)
+IMPLICIT NONE
+CHARACTER(LEN = 5) :: YoN
+REAL(KIND = 8) :: DefaultTol, aTol, bTol, cTol, alphaTol, betaTol, gammaTol, VolTol
 
 !Allow user to set different tolerance or use global tolerance
+DefaultTol = 5.0_8
+
+aTol = DefaultTol
+bTol = DefaultTol
+cTol = DefaultTol
+alphaTol = DefaultTol
+betaTol = DefaultTol
+gammaTol = DefaultTol
+VolTol = DefaultTol
+
 WRITE(6,*)
 WRITE(6,*) ' Tolerance Is +/-5% for all parameters'
 WRITE(6,*) 'Would you like to change this? (y/n)'
 WRITE(6,*)
-READ(5,*) TolYoN
-DO WHILE (TolYoN/='y' .AND. TolYoN/='n')
+READ(5,*) YoN
+DO WHILE (YoN/='y' .AND. YoN/='n')
     WRITE(6,*)
     WRITE(6,*) 'Lets try that again Chief'
     WRITE(6,*) 'Would you like to change this? (y/n)'
-    READ(5,*) TolYoN
+    READ(5,*) YoN
 END DO
 
-IF (TolYoN == 'y') THEN
+IF (YoN == 'y') THEN
     WRITE(6,*) 'Please input tolerance percentage as an integer in this order'
     WRITE(6,*) 'a b c alpha beta gamma volume'
     READ(5,*) aTol, bTol, cTol, alphaTol, betaTol, gammaTol, VolTol
@@ -120,28 +157,39 @@ IF (TolYoN == 'y') THEN
     betaTol = betaTol/100.0_8
     gammaTol = gammaTol/100.0_8
     VolTol = VolTol/100.0_8
-
-ELSE 
-    aTol = DefaultTol
-    bTol = DefaultTol
-    cTol = DefaultTol
-    alphaTol = DefaultTol
-    betaTol = DefaultTol
-    gammaTol = DefaultTol
-    VolTol = DefaultTol
 END IF
 
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Find similar structures !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+END SUBROUTINE SetTolerances
 
-!cycle through database structures
+
+FUNCTION RangeFall(Val,DBVal, Tol) RESULT(out)
+
+REAL(KIND = 8) :: Val, DBVal, Tol
+CHARACTER(LEN=1) :: out
+
+IF (Val >= DBVal + DBVal*Tol) THEN
+    out = 'n'
+
+ELSEIF (Val <= DBVal - DBVal*Tol) THEN
+    out = 'n'
+
+ELSE
+    out = 'y'
+
+END IF
+
+END FUNCTION RangeFall
+
+SUBROUTINE CheckAndWrite(NDatabaseEntries, INa, INb, INc, InAlpha, InBeta, InGamma, InVolume, aTol, bTol, cTol, alphaTol, betaTol, gammaTol, VolTol, DBa, DBb, DBc, DBAlpha, DBbeta, DBGamma, DBVolume)
+IMPLICIT NONE
+INTEGER :: DBE, NDatabaseEntries, SimilarityFlag
+INTEGER, ALLOCATABLE :: SimilarityCount(:,:)
+REAL(KIND = 8) :: INa, INb, INc, InAlpha, InBeta, InGamma, InVolume, aTol, bTol, cTol, alphaTol, betaTol, gammaTol, VolTol
+REAL(KIND = 8) :: DBa(:), DBb(:), DBc(:), DBAlpha(:), DBBeta(:), DBGamma(:), DBVolume(:)
+CHARACTER(LEN = 5) :: QuickFlag
 
 ALLOCATE(SimilarityCount(NDatabaseEntries,7)) !SimilarityCount(a,b,c,alpha,beta,gamma,volume)
-
-
-SimilarityCount = 0
 
 DO DBE = 1, NDatabaseEntries
 
@@ -163,53 +211,35 @@ END DO
 
 !Add on Similarities
 DO DBE = 1, NDatabaseEntries
-    
+
     IF (SimilarityCount(DBE,1) == 1 .AND. SimilarityCount(DBE,2) == 1 .AND. SimilarityCount(DBE,3) == 1 .AND. SimilarityCount(DBE,4) == 1 .AND. SimilarityCount(DBE,5) == 1 .AND. SimilarityCount(DBE,6) == 1 .AND. SimilarityCount(DBE,7) == 1) SimilarityFlag = 1
 
 END DO
 
+IF ( quickflag /= 'y') THEN
+    IF (SimilarityFlag > 0) THEN
 
-IF (SimilarityFlag > 0) THEN
-
-    WRITE(6,*) 'Similarities:' 
-    WRITE(6,*) 
-    
+        WRITE(6,*) 'Similarities:' 
+        WRITE(6,*) 
+        
         DO DBE = 1, NDatabaseEntries
-            IF (SimilarityCount(DBE,1) == 1 .AND. SimilarityCount(DBE,2) == 1 .AND. SimilarityCount(DBE,3) == 1 .AND. SimilarityCount(DBE,4) == 1 .AND. SimilarityCount(DBE,5) == 1 .AND. SimilarityCount(DBE,6) == 1 .AND. SimilarityCount(DBE,7) == 1) THEN
-                WRITE(6,'(A9, F7.3, A2, F7.3, A2, F7.3, A2, F7.3, A2, F7.3, A2, F7.3, A2, F8.3, A23, A7)') 'a, b, c, alpha, beta, gamma, volume (', Ina,', ', Inb,', ', Inc, InAlpha,', ', InBeta,', ', INGamma, InVolume, ') are close to that of ', DBCollectionCode(DBE)
-                WRITE(6,'(A9, F7.3, A2, F7.3, A2, F7.3, A2, F7.3, A2, F7.3, A2, F7.3, A2, F8.3, A1)') 'a, b, c, alpha, beta, gamma, volume (', DBa(DBE),', ', DBb(DBE),', ', DBc(DBE), DBAlpha(DBE),', ', DBBeta(DBE),', ', DBGamma(DBE), DBVolume(DBE),')'
-                WRITE(6,*)
-            END IF
-   
-        END DO
-            
-ELSE
-    WRITE(6,*) 
-    WRITE(6,*) 'No Similarities'
-    WRITE(6,*) 
+        IF (SimilarityCount(DBE,1) == 1 .AND. SimilarityCount(DBE,2) == 1 .AND. SimilarityCount(DBE,3) == 1 .AND. SimilarityCount(DBE,4) == 1 .AND. SimilarityCount(DBE,5) == 1 .AND. SimilarityCount(DBE,6) == 1 .AND. SimilarityCount(DBE,7) == 1) THEN
+            WRITE(6,'(A, F7.3, A, F7.3, A, F7.3, A, F7.3, A, F7.3, A, F7.3, A, F8.3, A, A)') 'a, b, c, alpha, beta, gamma, volume (', Ina,', ', Inb,', ', Inc,', ', InAlpha,', ', InBeta,', ', INGamma,', ', InVolume, ') are close to that of ', ADJUSTL(TRIM(DBCollectionCode(DBE)))
+            WRITE(6,'(A, F7.3, A, F7.3, A, F7.3, A, F7.3, A, F7.3, A, F7.3, A, F8.3, A)') 'a, b, c, alpha, beta, gamma, volume (', DBa(DBE),', ', DBb(DBE),', ', DBc(DBE),', ', DBAlpha(DBE),', ', DBBeta(DBE),', ', DBGamma(DBE),', ', DBVolume(DBE),')'
+            WRITE(6,*)
+        END IF
+
+    END DO
+                
+    ELSE
+        WRITE(6,*) 
+        WRITE(6,*) 'No Similarities'
+        WRITE(6,*) 
+    END IF
 END IF
 
+END SUBROUTINE CheckAndWrite
 
-
-CONTAINS
-
-FUNCTION RangeFall(Val,DBVal, Tol) RESULT(out)
-
-REAL(KIND = 8) :: Val, DBVal, Tol
-CHARACTER(LEN=1) :: out
-
-IF (Val >= DBVal + DBVal*Tol) THEN
-    out = 'n'
-
-ELSEIF (Val <= DBVal - DBVal*Tol) THEN
-    out = 'n'
-
-ELSE
-    out = 'y'
-
-END IF
-
-END FUNCTION RangeFall
 
 
 FUNCTION Replace_Text (s,old,new)  RESULT(outs)
