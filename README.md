@@ -3,12 +3,11 @@ A set of programs designed to create a database of CIF cell parameters in the fo
 
                                                     kragskow.com/cifdb
 
-.exe files are for windows
-
 .f95 files are source
-
-.linux files are for linux (REMOVE .linux BEFORE USING!)
 
 Windows users please install minGW https://gcc.gnu.org/wiki/GFortranBinaries
 
 Mac/Linux users please install gfortran/gcc via your package manager (apt, aptitude, homebrew). 
+
+Compile with 
+  gfortran FILE.f90 -o FILE -ffree-line-length=3500
