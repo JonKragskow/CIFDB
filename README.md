@@ -10,4 +10,4 @@ Windows users please install minGW https://gcc.gnu.org/wiki/GFortranBinaries
 Mac/Linux users please install gfortran/gcc via your package manager (apt, aptitude, homebrew). 
 
 Compile with 
-  gfortran FILE.f90 -o FILE -ffree-line-length=3500
+    gfortran FILE.f90 -o FILE -ffree-line-length=3500
